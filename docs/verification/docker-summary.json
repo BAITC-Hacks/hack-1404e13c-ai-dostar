@@ -209,6 +209,13 @@
       "statistical": "passed",
       "ml": "passed"
     },
-    "volume_survives_recreation": true
+    "volume_survives_recreation": true,
+    "linux_full_final_image": {
+      "passed": 124,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 190.88
+    }
   }
 }
