@@ -29,7 +29,11 @@ def synchronized(function):
 
 
 def clean_reason(value: object) -> str:
-    return "" if pd.isna(value) else str(value).strip()
+    """Preserve missing cells, including legacy stringified nulls, as empty."""
+    if pd.isna(value):
+        return ""
+    text = str(value).strip()
+    return "" if text.casefold() in {"<na>", "nan", "none"} else text
 
 
 def _key(supplier: str, sku: str) -> str:
@@ -81,11 +85,11 @@ def apply_saved(lines: pd.DataFrame, as_of: pd.Timestamp, path: Path = STATE_FIL
         if saved and saved.get("signature") == _signature(row, as_of):
             candidate = row.copy()
             candidate["final_qty"] = saved["final_qty"]
-            candidate["override_reason"] = saved["override_reason"]
+            candidate["override_reason"] = clean_reason(saved["override_reason"])
             if validate_line(candidate):
                 continue
             result.at[index, "final_qty"] = float(saved["final_qty"])
-            result.at[index, "override_reason"] = str(saved["override_reason"])
+            result.at[index, "override_reason"] = candidate["override_reason"]
             result.at[index, "status"] = "approved"
     return result
 
@@ -101,7 +105,10 @@ def validate_line(row: pd.Series) -> str | None:
     if not math.isclose(qty, float(row["recommended_qty"]), rel_tol=0, abs_tol=1e-8):
         if not reason:
             return "Для изменения рекомендации укажите причину."
-    if qty > 0 and "needs_review" in str(row.get("flags", "")) and not reason:
+    # Estimated stock is acknowledged once for the supplier in the UI; actual
+    # missing/invalid input still needs a per-line review result or exclusion.
+    flags = str(row.get("flags", "")).replace("needs_review:estimated_stock", "")
+    if qty > 0 and "needs_review" in flags and not reason:
         return "Проверьте данные и укажите результат проверки в причине либо исключите позицию."
     return None
 

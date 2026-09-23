@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 
 import pandas as pd
 import pytest
@@ -102,3 +103,46 @@ def test_export_only_approved_positive_lines_and_escapes_formulas(tmp_path):
     xlsx_table = pd.read_excel(io.BytesIO(to_xlsx(lines, products, "IEK")))
     assert csv_table.iloc[0]["Количество"] == 10
     assert xlsx_table.iloc[0]["Наименование"].startswith("'=HYPERLINK")
+
+
+@pytest.mark.parametrize("all_zero", [False, True])
+def test_zero_decisions_survive_recalculation_and_remain_out_of_export(tmp_path, all_zero):
+    baseline, products = _sample()
+    edited = baseline.copy()
+    selected = edited.index if all_zero else [0]
+    edited.loc[selected, "final_qty"] = 0
+    edited.loc[selected, "override_reason"] = "Не требуется"
+    path = tmp_path / "approvals.json"
+    date = pd.Timestamp("2026-09-22")
+    approve_supplier(edited, "IEK", date, path)
+    restored = apply_saved(baseline, date, path)
+    assert restored.loc[selected, "final_qty"].eq(0).all()
+    assert restored.loc[selected, "override_reason"].eq("Не требуется").all()
+    assert restored.loc[selected, "status"].eq("approved").all()
+    again = approve_supplier(restored, "IEK", date, path)
+    assert len(to_table(again, products, "IEK")) == (0 if all_zero else len(baseline) - 1)
+
+
+@pytest.mark.parametrize("reason", [None, pd.NA, float("nan"), "", "  ", "<NA>", "nan", "None"])
+def test_missing_reason_cannot_authorize_changed_quantity(tmp_path, reason):
+    lines, _ = _sample()
+    lines.at[0, "final_qty"] = 11
+    lines.at[0, "override_reason"] = reason
+    with pytest.raises(ValueError, match="причину"):
+        approve_supplier(lines, "IEK", pd.Timestamp("2026-09-22"), tmp_path / "approvals.json")
+
+
+def test_legacy_approval_with_stringified_missing_reason_is_not_restored(tmp_path):
+    base, _ = _sample()
+    edited = base.copy()
+    edited.at[0, "final_qty"] = 11
+    edited.at[0, "override_reason"] = "Контракт"
+    date = pd.Timestamp("2026-09-22")
+    path = tmp_path / "approvals.json"
+    approve_supplier(edited, "IEK", date, path)
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    saved["orders"][f"IEK|{base.at[0, 'sku']}"]["override_reason"] = "<NA>"
+    path.write_text(json.dumps(saved), encoding="utf-8")
+    restored = apply_saved(base, date, path)
+    assert restored.at[0, "status"] == "draft"
+    assert restored.at[0, "final_qty"] == 10

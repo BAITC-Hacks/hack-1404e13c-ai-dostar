@@ -74,7 +74,7 @@ def order_tab(result: schema.PipelineResult, data: dict[str, pd.DataFrame]) -> N
     metrics = st.columns(3)
     metrics[0].metric("Позиций к заказу", int(subset["final_qty"].gt(0).sum()))
     metrics[1].metric("Критичных", int((subset["urgency"].eq("critical") & subset["final_qty"].gt(0)).sum()))
-    metrics[2].metric("Утверждено", int(subset["status"].eq("approved").sum()))
+    metrics[2].metric("Утверждено к заказу", int((subset["status"].eq("approved") & subset["final_qty"].gt(0)).sum()))
 
     categories = sorted(subset["category"].dropna().unique().tolist())
     selected_categories = st.multiselect("Категория", categories, placeholder="Все категории")
@@ -113,7 +113,7 @@ def order_tab(result: schema.PipelineResult, data: dict[str, pd.DataFrame]) -> N
             new_qty = float(row["final_qty"])
         except (TypeError, ValueError):
             new_qty = float("nan")
-        old_reason = str(current.at[key, "override_reason"])
+        old_reason = clean_reason(current.at[key, "override_reason"])
         new_reason = clean_reason(row["override_reason"])
         if new_qty != old_qty or new_reason != old_reason:
             if current.at[key, "status"] == "approved":
@@ -128,11 +128,14 @@ def order_tab(result: schema.PipelineResult, data: dict[str, pd.DataFrame]) -> N
     if problems:
         st.warning("\n".join(problems[:8]))
 
-    if st.button("Сводка по заказу поставщика"):
+    summary_key = supplier_rows.to_json(orient="split", force_ascii=False)
+    if st.button("Сводка по заказу поставщика", disabled=bool(problems)):
         with st.spinner("Готовлю сводку по итоговым количествам…"):
-            answer = supplier_summary(st.session_state.order_lines, chosen)
-        st.write(answer.text)
-        st.caption(f"Источник: {answer.source}. Сводка учитывает правки менеджера.")
+            st.session_state.supplier_answer = (summary_key, supplier_summary(supplier_rows, chosen))
+    summary = st.session_state.get("supplier_answer")
+    if summary and summary[0] == summary_key:
+        st.write(summary[1].text)
+        st.caption(f"Источник: {summary[1].source}. Сводка учитывает правки менеджера.")
 
     stock_checked = not estimated or st.checkbox(
         "Оценку остатка сверил со складом; итоговые количества проверены",
@@ -151,8 +154,7 @@ def order_tab(result: schema.PipelineResult, data: dict[str, pd.DataFrame]) -> N
             st.error(str(exc))
     st.caption("Утверждение сохраняется в data/state/approvals.json. Отправки поставщику нет.")
 
-    # Re-read the persisted approvals for every download. Another browser
-    # session may have revoked or changed an order since this page was drawn.
+    # Resolve persisted approvals both when rendering and when downloading.
     approval_file = STATE_FILE
     export_lines = apply_saved(result.order_lines, result.as_of, approval_file)
     shown = st.session_state.order_lines.set_index(["supplier", "sku"])
@@ -163,9 +165,11 @@ def order_tab(result: schema.PipelineResult, data: dict[str, pd.DataFrame]) -> N
     approved = to_table(export_lines, data["products"], chosen)
     if not approved.empty:
         left, right = st.columns(2)
-        left.download_button("Скачать XLSX", to_xlsx(export_lines, data["products"], chosen),
+        left.download_button("Скачать XLSX", lambda: to_xlsx(
+            apply_saved(result.order_lines, result.as_of, approval_file), data["products"], chosen),
                              file_name=f"order_{chosen}_{result.as_of.date()}.xlsx")
-        right.download_button("Скачать CSV", to_csv(export_lines, data["products"], chosen),
+        right.download_button("Скачать CSV", lambda: to_csv(
+            apply_saved(result.order_lines, result.as_of, approval_file), data["products"], chosen),
                               file_name=f"order_{chosen}_{result.as_of.date()}.csv", mime="text/csv")
 
 
@@ -226,13 +230,14 @@ def product_tab(result: schema.PipelineResult) -> None:
         st.info("Товар отсутствует в текущем расчёте заказа: нет положительной базы регулярного спроса. История показана выше.")
         return
     st.write(row["rationale"])
+    detail_key = row.to_json(force_ascii=False)
     if row["flags"]:
         st.warning(f"Проверьте данные перед утверждением: {row['flags']}")
     if st.button("Объяснить подробнее", key=f"explain_{supplier}_{sku}"):
         with st.spinner("Готовлю объяснение…"):
-            st.session_state.detail_answer = (selected, explain_line(row))
+            st.session_state.detail_answer = (detail_key, explain_line(row))
     detail = st.session_state.get("detail_answer")
-    if detail and detail[0] == selected:
+    if detail and detail[0] == detail_key:
         st.write(detail[1].text)
         st.caption(f"Источник: {detail[1].source}")
     st.dataframe(pd.DataFrame({"Показатель": ["Спрос/день", "Сезонность", "Тренд", "Рост", "Горизонт",
@@ -259,7 +264,7 @@ def checks_tab(result: schema.PipelineResult, data: dict[str, pd.DataFrame]) -> 
 
 def calculate_checks(result, data, selected, extra):
     supplier, sku = selected
-    enabled = replace(result.params, use_oneoff_filter=True, use_stockout_fix=True,
+    enabled = replace(result.params, as_of=result.as_of, use_oneoff_filter=True, use_stockout_fix=True,
                       use_seasonality=True, use_trend=True, use_in_transit=True)
     baseline = run(data, enabled).order_lines.query("supplier == @supplier and sku == @sku")
     if baseline.empty:
@@ -348,6 +353,7 @@ if st.sidebar.button("Рассчитать", type="primary", disabled=(data is N
     st.session_state.calculation_id = st.session_state.get("calculation_id", 0) + 1
     st.session_state.pop("check_scenarios", None)
     st.session_state.pop("detail_answer", None)
+    st.session_state.pop("supplier_answer", None)
 
 result = st.session_state.get("result")
 if result is None:

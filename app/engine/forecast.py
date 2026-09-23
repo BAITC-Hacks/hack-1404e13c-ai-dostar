@@ -132,8 +132,11 @@ def forecast(demand_monthly: pd.DataFrame, monthly_sales: pd.DataFrame, seasonal
 
     # Robust residual spread: one leftover spike should not inflate safety stock.
     resid = recent - base_monthly.to_numpy()[:, None] * recent_idx
-    mad = resid.sub(resid.median(axis=1), axis=0).abs().median(axis=1) * 1.4826
-    sigma_monthly = mad.where(mad > 0, resid.std(axis=1, ddof=0) * 0.5)
+    # IQR uses the central half of the residual distribution. On a short monthly
+    # window, nested medians (MAD) can jump when one ordinary-sized sale moves
+    # the centre, amplifying a small demand change into a large safety-stock jump.
+    iqr = resid.quantile(0.75, axis=1) - resid.quantile(0.25, axis=1)
+    sigma_monthly = (iqr / 1.349).where(iqr > 0, resid.std(axis=1, ddof=0) * 0.5)
     out["sigma_daily"] = sigma_monthly / np.sqrt(DAYS_PER_MONTH)
 
     out["avg_daily_regular"] = base_monthly / DAYS_PER_MONTH

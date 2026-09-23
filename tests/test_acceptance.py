@@ -197,14 +197,8 @@ def test_4_injected_one_off_does_not_inflate_order(data, base):
         "qty": 50 * median, "unit": "шт", "warehouse": "Алматы"}]), schema.SALES_LINES)
     injected = _with(data, "sales_lines", pd.concat([sales, spike], ignore_index=True))
 
-    # ТЗ: «не вызывает значительного роста рекомендуемого регулярного количества».
-    # Сравниваем регулярную потребность (прогноз + страховой запас): итоговый заказ —
-    # это разность с остатком и в процентах усиливает любое малое изменение.
-    def need(line):
-        return line["forecast_H"] + line["safety_stock"]
-
-    before = need(_line(base, supplier, sku))
+    before = _line(base, supplier, sku)["recommended_qty"]
     filtered = _line(run(injected), supplier, sku)
     unfiltered = _line(run(injected, schema.Params(use_oneoff_filter=False)), supplier, sku)
-    assert need(filtered) <= 1.10 * before
-    assert need(unfiltered) > 1.3 * before  # без фильтра разовая строка раздувает потребность
+    assert abs(filtered["recommended_qty"] - before) < 0.10 * before
+    assert unfiltered["recommended_qty"] > 1.3 * before

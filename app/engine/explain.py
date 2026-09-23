@@ -25,11 +25,14 @@ def _line(r) -> str:
         parts.append(", ".join(factors))
     parts.append(f"на {r.horizon_days} дн. нужно {_fmt(r.forecast_H)} + страховой {_fmt(r.safety_stock)}")
     parts.append(f"есть {_fmt(r.free_qty)}, в пути {_fmt(r.in_transit_H)}")
-    return "; ".join(parts) + f" → заказ {_fmt(r.recommended_qty)}"
+    text = "; ".join(parts) + f" → заказ {_fmt(r.recommended_qty)}"
+    if "estimated_stock" in str(r.flags):
+        text += ". Остаток оценочный: начало месяца минус продажи, поступления неизвестны; требуется сверка"
+    return text
 
 
 def add_rationale(order_lines: pd.DataFrame) -> pd.DataFrame:
-    """Fill `rationale` from the numbers of each line. STUB wording — refine in task 2.3."""
+    """Fill `rationale` from calculated values, keeping stock uncertainty visible."""
     out = order_lines.copy()
     out["rationale"] = [_line(r) for r in out.itertuples()]
     return out

@@ -22,6 +22,11 @@ def calc(fc: pd.DataFrame, demand_monthly: pd.DataFrame, stock_now: pd.DataFrame
     idx = pd.MultiIndex.from_frame(out[keys])
     out["free_qty"] = stock.reindex(idx).to_numpy()
     flags = np.where(out["free_qty"].isna(), "needs_review:no_stock", "")
+    # The IEK adapter estimates stock from month-start stock minus sales;
+    # receipts are not available. Surface the uncertainty without inventing stock.
+    flags = np.where(out["supplier"].eq("IEK"),
+                     np.where(flags == "", "needs_review:estimated_stock",
+                              flags + ",needs_review:estimated_stock"), flags)
     out["free_qty"] = out["free_qty"].fillna(0.0)
 
     horizon_end = as_of + pd.to_timedelta(out["horizon_days"], unit="D")

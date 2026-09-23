@@ -3,6 +3,6 @@ numpy
 openpyxl
 python-calamine
 pyarrow
-streamlit
+streamlit>=1.64
 pytest
 openai
