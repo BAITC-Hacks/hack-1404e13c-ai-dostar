@@ -81,7 +81,7 @@ class PipelineResult:
 ### Человек 2 — Расчет (начинает первым: он разблокирует остальных)
 
 - [x] **2.0 Каркас (к 0:15, один коммит, сразу push).** Добавить в `schema.py` `SALES_FLAGGED`, `DEMAND_MONTHLY`, `FORECAST`, `PipelineResult`. Создать все файлы движка с правильными сигнатурами и **рабочими заглушками**: `flag_oneoffs` ставит `is_oneoff=False`, `build_monthly` агрегирует накладные по месяцам (`qty_regular = qty_raw`), `forecast` берет среднее, `calc` считает `Q = forecast_H − free − transit`. `pipeline.run` проходит от начала до конца. Создать пустые `tests/test_demand.py`, `app/ui/app.py`, `app/mock.py`, чтобы никто не создавал их параллельно.
-- [ ] **2.1 Прогноз** `forecast.forecast(demand_monthly, monthly_sales, seasonality, products, params, as_of) -> FORECAST`
+- [x] **2.1 Прогноз** `forecast.forecast(demand_monthly, monthly_sales, seasonality, products, params, as_of) -> FORECAST`
   - база — средний `qty_regular` за последние 6–12 полных месяцев, десезонированный;
   - сезонный индекс SKU по месяцам горизонта: форма из `monthly_sales` 2024–2026 (нормированная, не уровень) + накладные; при коротком или редком ряде сжимать к `seasonality` компании (`w = n/(n+k)`);
   - тренд — наклон по десезонированным последним 12 мес., ограничить (например, 0.7–1.3);

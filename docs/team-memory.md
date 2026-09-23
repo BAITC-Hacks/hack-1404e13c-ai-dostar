@@ -10,7 +10,7 @@ This file is committed with the project and read by coding agents at the start o
 
 ## Progress (обновлять при каждом push)
 
-Статус на 2026-09-23, после коммита `960393f`. Подробные задачи и владельцы — `docs/tasks.md`.
+Статус на 2026-09-23, после задачи 2.1 (прогноз с сезонностью). Подробные задачи и владельцы — `docs/tasks.md`.
 
 **Сделано (в `main`):**
 
@@ -24,8 +24,9 @@ This file is committed with the project and read by coding agents at the start o
 | **Задача 2.0**: каркас движка, `pipeline.run()` работает на реальных данных (~3 с) | `app/engine/`, `app/pipeline.py` | `960393f` |
 | Заготовки для Продукта: Streamlit (мок ↔ реальный расчет), мок, экспорт, copilot | `app/ui/app.py`, `app/mock.py`, `app/export.py`, `app/copilot.py` | `960393f` |
 | Тесты приемки (must-have 2–4 пока `xfail`) | `tests/test_acceptance.py`, `tests/test_demand.py` | `960393f` |
+| **Задача 2.1**: прогноз с сезонностью (SKU → группа → компания), устойчивый тренд, робастная σ; методика | `app/engine/forecast.py`, `docs/methodology-forecast.md` | этот коммит |
 
-**Тесты сейчас:** 11 passed, 3 xfailed. Каждый `xfail` = невыполненный must-have: сезонность (2.1), дефициты (1.2), Петля/Коробки (1.1).
+**Тесты сейчас:** 13 passed, 2 xfailed. Must-have №2 (сезонность и устойчивый рост) закрыт. Остались `xfail`: дефициты (1.2), Петля/Коробки (1.1).
 
 **Что в каркасе заглушка, а что уже настоящее:**
 
@@ -33,8 +34,8 @@ This file is committed with the project and read by coding agents at the start o
 |---|---|---|
 | `engine/oneoffs.py` | контракт, `report()` | разовые не помечаются → Человек 1, задача 1.1 |
 | `engine/demand.py` | сетка месяцев 2025-01..as_of, нетто продажи, вычет разовых, флаг stockout, неполный текущий месяц | uplift за дефицит = 0 → Человек 1, задача 1.2 |
-| `engine/forecast.py` | среднее за 12 полных мес., рост по категории, горизонт | сезонность = тренд = 1, σ грубая → Человек 2, задача 2.1 |
-| `engine/replenish.py` | вся формула: в пути в горизонте, z·σ·√LT, кратность, срочность, `needs_review` | доработать σ/страховой → Человек 2, задача 2.2 |
+| `engine/forecast.py` | **готово (2.1)**: сезонность с усадкой, тренд, рост, робастная σ | — |
+| `engine/replenish.py` | вся формула: в пути в горизонте, z·σ·√LT, кратность, срочность, `needs_review` | мелкие доработки → Человек 2, задача 2.2 |
 | `engine/explain.py` | шаблонное обоснование из чисел | формулировки → Человек 2, задача 2.3 |
 | `app/ui/app.py` | таблица по поставщикам, переключатель мок/реальные | вкладки, редактирование, утверждение → Человек 3, 3.1–3.7 |
 | `app/export.py` | `to_table`, `to_xlsx`, защита от формул | кнопки в UI → Человек 3, 3.3 |
@@ -42,7 +43,7 @@ This file is committed with the project and read by coding agents at the start o
 **Следующие шаги:**
 
 - Человек 1 — 1.1 разовые заказы (снять `xfail` с `test_4_loop_one_off_excluded`), затем 1.2 uplift (`test_3_stockout_fix_raises_demand`).
-- Человек 2 — 2.1 сезонность и тренд (`test_2_seasonality_changes_forecast`), разобраться со страховым запасом.
+- Человек 2 — 2.2 (проверить крайние случаи пополнения), 2.3 формулировки обоснования, 2.4 оставшиеся приемочные тесты.
 - Человек 3 — 3.1–3.3 на моке; в 1:10 выключить «Мок-данные» и работать с `pipeline.run()`.
 
 ## Decisions
@@ -85,8 +86,10 @@ This file is committed with the project and read by coding agents at the start o
 
 - 2026-09-23: Task 2.0 skeleton pushed. Engine files exist with working stubs: `flag_oneoffs` flags nothing, `build_monthly` builds the month grid 2025-01..as_of with stockout flag but uplift = 0, `forecast` = 12-month average with seasonal_index = trend = 1, `replenish.calc` implements the full formula (horizon transit, z·σ·√LT safety, pack rounding, urgency, needs_review when stock is missing), `explain` builds a template rationale.
 - `as_of` defaults to the last sale date (2026-09-22). Every engine function takes `(…, params, as_of)`.
-- Known issue for 2.1/2.2: with σ from monthly std, safety stock is often larger than forecast_H for volatile SKUs (e.g. IEK pipes) — revisit σ once one-offs and seasonality are in.
-- Stub result: 2460 SKUs with demand, 1040 with recommended_qty > 0.
+- 2026-09-23: Task 2.1 done. Forecast history = rescaled 2024 monthly report + invoice `qty_regular` from 2025 (full months only). Seasonal index per calendar month: ratio to centred 12-month MA, shrunk SKU → product group (n/(n+24)) → company (n/(n+12)), clipped 0.4–2.5. Trend only if sustained (OLS slope sign = last-6 vs prev-6 sign, ≥8 of 12 nonzero months), damped ×0.5, capped 0.8–1.25. σ = 1.4826·MAD of residuals. Details: `docs/methodology-forecast.md`.
+- Seasonal demo SKU: IEK `130300792_` «Труба гибкая Ø50» — seasonal index 0.41 (Feb), 1.05 (Jun), 2.03 (Sep–Oct horizon). Also `130300791_` Ø40.
+- Safety-stock issue resolved by robust σ: pipes safety 2 764 vs forecast 11 976 (was larger than forecast). Result now: 842 SKUs with recommended_qty > 0; ~38% SKUs have trend ≠ 1.
+- `avg_daily_regular` is the deseasonalised base; the rationale shows seasonality/trend as separate factors.
 
 ## Продукт
 
