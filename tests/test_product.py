@@ -9,7 +9,7 @@ import pytest
 
 from app.export import to_csv, to_table, to_xlsx
 from app.mock import mock_order_lines
-from app.ui.state import apply_saved, approve_supplier, revoke_line
+from app.ui.state import apply_saved, approve_supplier, revoke_line, clean_reason, validate_line
 
 
 def _sample():
@@ -54,6 +54,36 @@ def test_zeroing_recommendation_requires_reason(tmp_path):
     lines.at[0, "final_qty"] = 0.0
     with pytest.raises(ValueError, match="причину"):
         approve_supplier(lines, "IEK", pd.Timestamp("2026-09-22"), tmp_path / "approvals.json")
+
+
+def test_zero_decisions_survive_recalculation_and_all_zero_order(tmp_path):
+    lines, _ = _sample()
+    path = tmp_path / "approvals.json"
+    date = pd.Timestamp("2026-09-22")
+    approve_supplier(lines, "IEK", date, path)
+    lines["final_qty"] = 0.0
+    lines["override_reason"] = "Отмена закупки"
+    approve_supplier(lines, "IEK", date, path)
+    restored = apply_saved(_sample()[0], date, path)
+    assert restored["final_qty"].eq(0).all()
+    assert restored["status"].eq("approved").all()
+
+
+@pytest.mark.parametrize("missing", [None, pd.NA, float("nan"), "", "  "])
+def test_empty_reason_cannot_bypass_validation(missing):
+    row = _sample()[0].iloc[0].copy()
+    row["final_qty"] += 1
+    row["override_reason"] = clean_reason(missing)
+    assert validate_line(row)
+
+
+def test_flagged_lines_require_review_or_exclusion(tmp_path):
+    lines, _ = _sample()
+    lines.at[0, "flags"] = "needs_review:no_stock"
+    with pytest.raises(ValueError, match="Проверьте"):
+        approve_supplier(lines, "IEK", pd.Timestamp("2026-09-22"), tmp_path / "a.json")
+    lines.at[0, "override_reason"] = "Остаток проверен по складу"
+    assert validate_line(lines.iloc[0]) is None
 
 
 def test_export_only_approved_positive_lines_and_escapes_formulas(tmp_path):

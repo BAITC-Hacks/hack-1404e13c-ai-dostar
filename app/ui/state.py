@@ -7,6 +7,8 @@ import json
 import math
 import os
 import tempfile
+import threading
+from functools import wraps
 from pathlib import Path
 
 import pandas as pd
@@ -14,6 +16,20 @@ import pandas as pd
 
 STATE_FILE = Path(__file__).resolve().parents[2] / "data" / "state" / "approvals.json"
 EDITABLE_FIELDS = {"final_qty", "override_reason", "status"}
+_STATE_LOCK = threading.RLock()
+
+
+def synchronized(function):
+    """Serialize read-modify-write across sessions of the local Streamlit server."""
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        with _STATE_LOCK:
+            return function(*args, **kwargs)
+    return wrapped
+
+
+def clean_reason(value: object) -> str:
+    return "" if pd.isna(value) else str(value).strip()
 
 
 def _key(supplier: str, sku: str) -> str:
@@ -47,6 +63,7 @@ def _save_state(state: dict, path: Path) -> None:
         temp_path.unlink(missing_ok=True)
 
 
+@synchronized
 def revoke_line(supplier: str, sku: str, path: Path = STATE_FILE) -> None:
     """Editing an approved line removes its former export authorization."""
     state = load_state(path)
@@ -54,6 +71,7 @@ def revoke_line(supplier: str, sku: str, path: Path = STATE_FILE) -> None:
         _save_state(state, path)
 
 
+@synchronized
 def apply_saved(lines: pd.DataFrame, as_of: pd.Timestamp, path: Path = STATE_FILE) -> pd.DataFrame:
     """Restore only approvals belonging to this exact calculated line."""
     result = lines.copy()
@@ -61,6 +79,11 @@ def apply_saved(lines: pd.DataFrame, as_of: pd.Timestamp, path: Path = STATE_FIL
     for index, row in result.iterrows():
         saved = orders.get(_key(str(row["supplier"]), str(row["sku"])))
         if saved and saved.get("signature") == _signature(row, as_of):
+            candidate = row.copy()
+            candidate["final_qty"] = saved["final_qty"]
+            candidate["override_reason"] = saved["override_reason"]
+            if validate_line(candidate):
+                continue
             result.at[index, "final_qty"] = float(saved["final_qty"])
             result.at[index, "override_reason"] = str(saved["override_reason"])
             result.at[index, "status"] = "approved"
@@ -74,17 +97,20 @@ def validate_line(row: pd.Series) -> str | None:
         return "Укажите числовое количество."
     if not math.isfinite(qty) or qty < 0:
         return "Количество должно быть конечным и неотрицательным."
+    reason = clean_reason(row["override_reason"])
     if not math.isclose(qty, float(row["recommended_qty"]), rel_tol=0, abs_tol=1e-8):
-        reason = row["override_reason"]
-        if pd.isna(reason) or not str(reason).strip():
+        if not reason:
             return "Для изменения рекомендации укажите причину."
+    if qty > 0 and "needs_review" in str(row.get("flags", "")) and not reason:
+        return "Проверьте данные и укажите результат проверки в причине либо исключите позицию."
     return None
 
 
+@synchronized
 def approve_supplier(
     lines: pd.DataFrame, supplier: str, as_of: pd.Timestamp, path: Path = STATE_FILE,
 ) -> pd.DataFrame:
-    """Approve all positive lines of one supplier after validating the whole order."""
+    """Persist the whole supplier decision, including explicitly excluded rows."""
     result = lines.copy()
     supplier_rows = result["supplier"].eq(supplier)
     problems = [
@@ -94,16 +120,17 @@ def approve_supplier(
     ]
     if problems:
         raise ValueError("\n".join(problems[:10]))
-    selected = supplier_rows & result["final_qty"].gt(0)
+    selected = supplier_rows
     if not selected.any():
-        raise ValueError("У поставщика нет позиций с положительным количеством.")
+        raise ValueError("У поставщика нет позиций.")
 
     state = load_state(path)
     for index, row in result.loc[selected].iterrows():
         state["orders"][_key(str(row["supplier"]), str(row["sku"]))] = {
             "signature": _signature(row, as_of),
             "final_qty": float(row["final_qty"]),
-            "override_reason": str(row["override_reason"]),
+            "override_reason": clean_reason(row["override_reason"]),
+            "approved_at": pd.Timestamp.now(tz="UTC").isoformat(),
         }
         result.at[index, "status"] = "approved"
     _save_state(state, path)

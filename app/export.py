@@ -41,6 +41,11 @@ def to_table(order_lines: pd.DataFrame, products: pd.DataFrame, supplier: str) -
     lines["warehouse"] = "Алматы"
     for column in ("supplier_article", "name", "unit", "rationale"):
         lines[column] = lines[column].fillna("")
+    reasons = lines["override_reason"].fillna("").astype(str).str.strip()
+    edited = reasons.ne("")
+    lines.loc[edited, "rationale"] = (
+        lines.loc[edited, "rationale"] + " Решение менеджера: " + reasons[edited]
+    )
     return lines[list(HEADERS)].rename(columns=HEADERS).map(_safe)
 
 

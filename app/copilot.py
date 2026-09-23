@@ -25,6 +25,7 @@ UI usage (Person 3):
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 from dataclasses import dataclass
@@ -83,7 +84,7 @@ def model_name() -> str:
     if os.environ.get("OPENAI_MODEL"):
         return os.environ["OPENAI_MODEL"]
     ids = sorted(m.id for m in _client().models.list())
-    minis = [i for i in ids if i.startswith("gpt-") and "mini" in i and not re.search(r"audio|realtime|tts|transcribe|search", i)]
+    minis = [i for i in ids if i.startswith("gpt-") and "mini" in i and not re.search(r"image|audio|realtime|tts|transcribe|search", i)]
     if not minis:
         raise RuntimeError("set OPENAI_MODEL: no gpt-*mini* model visible for this key")
     return minis[-1]
@@ -93,6 +94,8 @@ def model_name() -> str:
 
 def _num(x, digits: int = 0):
     x = float(x)
+    if not math.isfinite(x):
+        return None
     return round(x, digits) if digits else int(round(x))
 
 
@@ -123,7 +126,7 @@ def line_facts(row: pd.Series) -> dict:
 
 def supplier_facts(order_lines: pd.DataFrame, supplier: str, top: int = 5) -> dict:
     lines = order_lines[order_lines["supplier"] == supplier]
-    to_order = lines[lines["recommended_qty"] > 0]
+    to_order = lines[lines["final_qty"] > 0]
     urgent = to_order[to_order["urgency"] == "critical"].sort_values("days_of_cover").head(top)
     seasonal = to_order[to_order["seasonal_index"] >= 1.3].sort_values("seasonal_index", ascending=False).head(top)
     return {
@@ -138,7 +141,7 @@ def supplier_facts(order_lines: pd.DataFrame, supplier: str, top: int = 5) -> di
         "с_товаром_в_пути": int((to_order["in_transit_H"] > 0).sum()),
         "требуют_проверки": int(to_order["flags"].astype(str).str.contains("needs_review").sum()),
         "самые_срочные": [
-            {"товар": r.name, "запаса_дней": _num(r.days_of_cover), "заказать": _num(r.recommended_qty), "ед": r.unit}
+            {"товар": r.name, "запаса_дней": _num(r.days_of_cover), "заказать": _num(r.final_qty), "ед": r.unit}
             for r in urgent.itertuples()
         ],
         "самые_сезонные": [
@@ -176,13 +179,11 @@ def _fact_numbers(facts) -> set[float]:
 
 
 def unsupported_numbers(text: str, facts: dict) -> list[float]:
-    """Numbers in the model's text that are not in the facts (small counts 0..12 are allowed)."""
+    """Reject numbers absent from facts, including small invented quantities."""
     known = _fact_numbers(facts)
 
     def ok(x: float) -> bool:
-        if x <= 12 and x == int(x):
-            return True
-        return any(abs(x - k) <= max(0.011, 0.005 * abs(k)) for k in known)
+        return any(abs(x - k) < 1e-8 for k in known)
 
     return [x for x in _numbers(text) if not ok(x)]
 

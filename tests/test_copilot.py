@@ -78,5 +78,18 @@ def test_supplier_summary_template_and_llm(monkeypatch, llm):
 
 def test_number_guard():
     facts = {"a": 13900, "b": 2.03, "name": "Труба Ø50 IEK"}
-    assert copilot.unsupported_numbers("заказ 13 900, сезонность 2,03, труба Ø50, 3 месяца", facts) == []
+    assert copilot.unsupported_numbers("заказ 13 900, сезонность 2,03, труба Ø50", facts) == []
+    assert copilot.unsupported_numbers("заказать 7", facts) == [7.0]
     assert copilot.unsupported_numbers("заказ 14 000", facts) == [14000.0]
+
+
+def test_summary_uses_manager_edits(monkeypatch):
+    lines = mock_order_lines()
+    lines["final_qty"] = 0.0
+    assert copilot.supplier_facts(lines, "IEK")["позиций_к_заказу"] == 0
+
+
+def test_missing_numeric_fact_does_not_crash(monkeypatch, row):
+    monkeypatch.setattr(copilot, "enabled", lambda: False)
+    row["free_qty"] = float("nan")
+    assert copilot.explain_line(row).text == row["rationale"]
