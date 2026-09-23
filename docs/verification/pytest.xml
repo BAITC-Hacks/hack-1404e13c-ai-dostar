@@ -1,0 +1,118 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="0" failures="0" skipped="0" tests="113" time="185.912" timestamp="2026-09-23T17:18:22.899209+05:00">
+    <testcase classname="tests.test_acceptance" name="test_output_follows_contract" time="5.560" />
+    <testcase classname="tests.test_acceptance" name="test_pack_rounding" time="0.006" />
+    <testcase classname="tests.test_acceptance" name="test_1_in_transit_reduces_order" time="4.479" />
+    <testcase classname="tests.test_acceptance" name="test_1_late_transit_is_ignored" time="3.926" />
+    <testcase classname="tests.test_acceptance" name="test_1_lower_stock_raises_order" time="4.008" />
+    <testcase classname="tests.test_acceptance" name="test_1_more_sales_raise_forecast" time="3.538" />
+    <testcase classname="tests.test_acceptance" name="test_1_category_growth_forecast_applied" time="3.467" />
+    <testcase classname="tests.test_acceptance" name="test_1_pack_multiple_applied" time="3.833" />
+    <testcase classname="tests.test_acceptance" name="test_1_seasonality_sources_used" time="7.930" />
+    <testcase classname="tests.test_acceptance" name="test_1_stock_history_marks_stockouts" time="3.904" />
+    <testcase classname="tests.test_acceptance" name="test_2_seasonal_pattern_not_flat_average" time="0.405" />
+    <testcase classname="tests.test_acceptance" name="test_2_sustained_growth_raises_forecast" time="0.047" />
+    <testcase classname="tests.test_acceptance" name="test_3_stockout_fix_raises_demand" time="8.725" />
+    <testcase classname="tests.test_acceptance" name="test_4_loop_one_off_excluded" time="0.038" />
+    <testcase classname="tests.test_acceptance" name="test_4_injected_one_off_does_not_inflate_order" time="7.105" />
+    <testcase classname="tests.test_acceptance" name="test_invalid_inputs_flagged_not_invented" time="4.720" />
+    <testcase classname="tests.test_acceptance" name="test_rationale_has_pack_and_oneoff_source" time="0.006" />
+    <testcase classname="tests.test_adapters" name="test_tables_follow_contract" time="0.049" />
+    <testcase classname="tests.test_adapters" name="test_both_suppliers_present" time="0.483" />
+    <testcase classname="tests.test_adapters" name="test_products_unique_and_packs_valid" time="0.006" />
+    <testcase classname="tests.test_adapters" name="test_every_referenced_sku_has_product" time="0.453" />
+    <testcase classname="tests.test_adapters" name="test_totals_rows_removed" time="0.001" />
+    <testcase classname="tests.test_adapters" name="test_oneoff_control_case_present" time="0.013" />
+    <testcase classname="tests.test_adapters" name="test_seasonality_has_12_months" time="0.002" />
+    <testcase classname="tests.test_assistant" name="test_rules_parse_supplier_urgency_terms_and_signals" time="0.002" />
+    <testcase classname="tests.test_assistant" name="test_search_without_key_uses_rules" time="0.021" />
+    <testcase classname="tests.test_assistant" name="test_search_with_llm_filter_is_validated" time="0.017" />
+    <testcase classname="tests.test_assistant" name="test_search_llm_error_falls_back_to_rules" time="0.012" />
+    <testcase classname="tests.test_assistant" name="test_pair_review_uses_fixed_verdicts" time="0.008" />
+    <testcase classname="tests.test_assistant" name="test_unverified_replacement_is_not_written_to_order" time="0.014" />
+    <testcase classname="tests.test_assistant" name="test_pair_verdict_rules" time="0.001" />
+    <testcase classname="tests.test_assistant" name="test_lifecycle_on_real_data_is_advisory" time="4.428" />
+    <testcase classname="tests.test_copilot" name="test_no_key_uses_template" time="0.010" />
+    <testcase classname="tests.test_copilot" name="test_llm_answer_with_known_numbers" time="0.011" />
+    <testcase classname="tests.test_copilot" name="test_invented_number_falls_back" time="0.007" />
+    <testcase classname="tests.test_copilot" name="test_api_error_falls_back" time="0.008" />
+    <testcase classname="tests.test_copilot" name="test_supplier_summary_template_and_llm" time="0.036" />
+    <testcase classname="tests.test_copilot" name="test_untrusted_model_text_never_reaches_manager[Order 7 units.]" time="0.010" />
+    <testcase classname="tests.test_copilot" name="test_untrusted_model_text_never_reaches_manager[Order 37 units.]" time="0.006" />
+    <testcase classname="tests.test_copilot" name="test_untrusted_model_text_never_reaches_manager[Order seven units.]" time="0.006" />
+    <testcase classname="tests.test_copilot" name="test_untrusted_model_text_never_reaches_manager[{&quot;fact_ids&quot;: [&quot;decision&quot;], &quot;text&quot;: &quot;Order 7 units.&quot;}]" time="0.011" />
+    <testcase classname="tests.test_copilot" name="test_untrusted_model_text_never_reaches_manager[{&quot;fact_ids&quot;: [&quot;unknown&quot;]}]" time="0.010" />
+    <testcase classname="tests.test_copilot" name="test_untrusted_model_text_never_reaches_manager[{&quot;fact_ids&quot;: []}]" time="0.010" />
+    <testcase classname="tests.test_copilot" name="test_untrusted_model_text_never_reaches_manager[{&quot;fact_ids&quot;: [&quot;decision&quot;, &quot;decision&quot;]}]" time="0.007" />
+    <testcase classname="tests.test_copilot" name="test_untrusted_model_text_never_reaches_manager[{&quot;fact_ids&quot;: [7]}]" time="0.007" />
+    <testcase classname="tests.test_copilot" name="test_untrusted_model_text_never_reaches_manager[{&quot;fact_ids&quot;: &quot;decision&quot;}]" time="0.007" />
+    <testcase classname="tests.test_copilot" name="test_untrusted_model_text_never_reaches_manager[null]" time="0.007" />
+    <testcase classname="tests.test_copilot" name="test_untrusted_model_text_never_reaches_manager[]" time="0.007" />
+    <testcase classname="tests.test_copilot" name="test_model_default_does_not_discover_image_models" time="0.001" />
+    <testcase classname="tests.test_copilot" name="test_missing_fact_falls_back_without_network[nan-False]" time="0.007" />
+    <testcase classname="tests.test_copilot" name="test_missing_fact_falls_back_without_network[nan-True]" time="0.006" />
+    <testcase classname="tests.test_copilot" name="test_missing_fact_falls_back_without_network[inf-False]" time="0.006" />
+    <testcase classname="tests.test_copilot" name="test_missing_fact_falls_back_without_network[inf-True]" time="0.010" />
+    <testcase classname="tests.test_copilot" name="test_missing_fact_falls_back_without_network[missing2-False]" time="0.007" />
+    <testcase classname="tests.test_copilot" name="test_missing_fact_falls_back_without_network[missing2-True]" time="0.007" />
+    <testcase classname="tests.test_copilot" name="test_supplier_summary_uses_manager_quantities" time="0.025" />
+    <testcase classname="tests.test_copilot" name="test_required_decision_and_estimated_stock_cannot_be_omitted" time="0.011" />
+    <testcase classname="tests.test_copilot" name="test_summary_uses_manager_edits" time="0.012" />
+    <testcase classname="tests.test_copilot" name="test_missing_numeric_fact_does_not_crash" time="0.007" />
+    <testcase classname="tests.test_demand" name="test_injected_fifty_fold_line_is_reduced_to_typical" time="0.026" />
+    <testcase classname="tests.test_demand" name="test_recurrence_counts_distinct_months[months0-False]" time="0.020" />
+    <testcase classname="tests.test_demand" name="test_recurrence_counts_distinct_months[months1-True]" time="0.017" />
+    <testcase classname="tests.test_demand" name="test_mad_threshold_and_supplier_isolation" time="0.022" />
+    <testcase classname="tests.test_demand" name="test_large_line_with_small_month_share_is_retained" time="0.013" />
+    <testcase classname="tests.test_demand" name="test_filter_can_be_disabled" time="0.017" />
+    <testcase classname="tests.test_demand" name="test_oneoffs_include_cutoff_day_and_ignore_future_recurrence" time="0.018" />
+    <testcase classname="tests.test_demand" name="test_seasonality_and_partial_month[2025-03-31-1]" time="0.049" />
+    <testcase classname="tests.test_demand" name="test_seasonality_and_partial_month[2025-03-15-0.4838709677419355]" time="0.043" />
+    <testcase classname="tests.test_demand" name="test_correction_and_seasonality_switches" time="0.084" />
+    <testcase classname="tests.test_demand" name="test_no_uplift_before_first_activity_or_without_enough_history" time="0.085" />
+    <testcase classname="tests.test_demand" name="test_returns_and_oneoff_exclusion_precede_uplift" time="0.044" />
+    <testcase classname="tests.test_demand" name="test_invalid_seasonality_is_rejected[0]" time="0.036" />
+    <testcase classname="tests.test_demand" name="test_invalid_seasonality_is_rejected[-1]" time="0.039" />
+    <testcase classname="tests.test_demand" name="test_invalid_seasonality_is_rejected[nan]" time="0.040" />
+    <testcase classname="tests.test_demand" name="test_invalid_seasonality_is_rejected[inf]" time="0.038" />
+    <testcase classname="tests.test_demand" name="test_empty_inputs_keep_contract" time="0.021" />
+    <testcase classname="tests.test_demand" name="test_report_contains_traceable_oneoffs_and_typical_volume" time="0.033" />
+    <testcase classname="tests.test_demand" name="test_report_without_oneoffs_retains_columns" time="0.017" />
+    <testcase classname="tests.test_demand" name="test_real_loop_excluded_boxes_retained" time="1.858" />
+    <testcase classname="tests.test_demand" name="test_demand_monthly_contract" time="3.363" />
+    <testcase classname="tests.test_ml" name="test_features_and_cleaning_cannot_see_future" time="0.400" />
+    <testcase classname="tests.test_ml" name="test_missing_artifact_is_explicit" time="0.006" />
+    <testcase classname="tests.test_ml" name="test_training_artifact_and_temporal_validation" time="0.024" />
+    <testcase classname="tests.test_ml" name="test_real_ml_changes_forecast_and_preserves_order_rules" time="41.301" />
+    <testcase classname="tests.test_ml" name="test_ml_rejects_backdated_inference_and_incompatible_preprocessing" time="2.329" />
+    <testcase classname="tests.test_ml" name="test_real_ml_ui_selects_trained_model" time="9.299" />
+    <testcase classname="tests.test_product" name="test_changed_quantity_requires_reason_and_approval_survives_restart" time="0.077" />
+    <testcase classname="tests.test_product" name="test_zeroing_recommendation_requires_reason" time="0.010" />
+    <testcase classname="tests.test_product" name="test_zero_decisions_survive_recalculation_and_all_zero_order" time="0.046" />
+    <testcase classname="tests.test_product" name="test_empty_reason_cannot_bypass_validation[None]" time="0.006" />
+    <testcase classname="tests.test_product" name="test_empty_reason_cannot_bypass_validation[missing1]" time="0.006" />
+    <testcase classname="tests.test_product" name="test_empty_reason_cannot_bypass_validation[nan]" time="0.006" />
+    <testcase classname="tests.test_product" name="test_empty_reason_cannot_bypass_validation[]" time="0.006" />
+    <testcase classname="tests.test_product" name="test_empty_reason_cannot_bypass_validation[  ]" time="0.006" />
+    <testcase classname="tests.test_product" name="test_flagged_lines_require_review_or_exclusion" time="0.009" />
+    <testcase classname="tests.test_product" name="test_export_only_approved_positive_lines_and_escapes_formulas" time="0.367" />
+    <testcase classname="tests.test_product" name="test_zero_decisions_survive_recalculation_and_remain_out_of_export[False]" time="0.043" />
+    <testcase classname="tests.test_product" name="test_zero_decisions_survive_recalculation_and_remain_out_of_export[True]" time="0.038" />
+    <testcase classname="tests.test_product" name="test_missing_reason_cannot_authorize_changed_quantity[None0]" time="0.009" />
+    <testcase classname="tests.test_product" name="test_missing_reason_cannot_authorize_changed_quantity[reason1]" time="0.009" />
+    <testcase classname="tests.test_product" name="test_missing_reason_cannot_authorize_changed_quantity[nan0]" time="0.009" />
+    <testcase classname="tests.test_product" name="test_missing_reason_cannot_authorize_changed_quantity[]" time="0.009" />
+    <testcase classname="tests.test_product" name="test_missing_reason_cannot_authorize_changed_quantity[  ]" time="0.009" />
+    <testcase classname="tests.test_product" name="test_missing_reason_cannot_authorize_changed_quantity[&lt;NA&gt;]" time="0.008" />
+    <testcase classname="tests.test_product" name="test_missing_reason_cannot_authorize_changed_quantity[nan1]" time="0.012" />
+    <testcase classname="tests.test_product" name="test_missing_reason_cannot_authorize_changed_quantity[None1]" time="0.008" />
+    <testcase classname="tests.test_product" name="test_legacy_approval_with_stringified_missing_reason_is_not_restored" time="0.040" />
+    <testcase classname="tests.test_ui" name="test_explanation_buttons_receive_complete_rows" time="0.712" />
+    <testcase classname="tests.test_ui" name="test_cleared_reason_blocks_approval_and_zero_survives_restart" time="0.929" />
+    <testcase classname="tests.test_ui" name="test_download_reloads_approvals_after_another_session_revokes" time="0.593" />
+    <testcase classname="tests.test_ui" name="test_changed_quantity_hides_previous_explanation" time="0.659" />
+    <testcase classname="tests.test_ui_real" name="test_real_ui_order_explanation_checks_approval_exports_restart" time="42.422" />
+    <testcase classname="tests.test_ui_real" name="test_real_assistant_refreshes_search_after_edit_and_recalculation" time="9.619" />
+  </testsuite>
+</testsuites>

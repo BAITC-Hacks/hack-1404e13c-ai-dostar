@@ -40,7 +40,7 @@ def test_real_ui_order_explanation_checks_approval_exports_restart(tmp_path, mon
     result = at.session_state.result
     assert len(result.sales_flagged) > 200_000
     assert len(result.order_lines) > 2_000
-    assert len(at.tabs) == 5
+    assert len(at.tabs) == 6 and at.tabs[-1].label == "Ассистент"
 
     at.selectbox(key="product_sku").select("IEK | 130300792_").run()
     button(at, "Объяснить подробнее").click().run()
@@ -99,3 +99,43 @@ def test_real_ui_order_explanation_checks_approval_exports_restart(tmp_path, mon
     assert len(comparison) == 497
     assert comparison["Наш факт / месяц"].notna().any()
     assert comparison["Заказ менеджера"].isna().any()
+
+
+def test_real_assistant_refreshes_search_after_edit_and_recalculation(tmp_path, monkeypatch):
+    """A cached language filter must not freeze quantities from an older order."""
+    from app import assistant
+
+    monkeypatch.setattr(state, "STATE_FILE", tmp_path / "approvals.json")
+    monkeypatch.setattr(copilot, "enabled", lambda: False)
+    calls = []
+    real_search = assistant.search
+
+    def tracked_search(query, lines):
+        calls.append(query)
+        return real_search(query, lines)
+
+    monkeypatch.setattr(assistant, "search", tracked_search)
+    at = AppTest.from_file(APP, default_timeout=90).run()
+    button(at, "Рассчитать").click().run()
+    at.text_input(key="assistant_query").input("IEK заказ").run()
+    button(at, "Найти").click().run()
+    healthy(at)
+    found = at.session_state.assistant_found
+    assert found.source == "rules" and not found.rows.empty
+    assert found.rows.supplier.eq("IEK").all() and found.rows.final_qty.gt(0).all()
+    sku = found.rows.iloc[0].sku
+    shown = at.session_state.order_lines.query("supplier == 'IEK'").reset_index(drop=True)
+    row_number = int(shown.index[shown.sku.eq(sku)][0])
+    editor_key = f"editor_{at.session_state.calculation_id}_IEK__"
+    at.session_state[editor_key] = {
+        "edited_rows": {row_number: {"final_qty": 0, "override_reason": "Проверка актуальности поиска"}},
+        "added_rows": [], "deleted_rows": [],
+    }
+    at.run()
+    healthy(at)
+    assert sku not in set(at.session_state.assistant_found.rows.sku)
+    assert calls == ["IEK заказ"]  # Refreshing a table must not spend another API call.
+    button(at, "Рассчитать").click().run()
+    healthy(at)
+    assert "assistant_found" not in at.session_state
+    assert calls == ["IEK заказ"]

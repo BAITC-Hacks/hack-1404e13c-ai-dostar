@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="320" viewBox="0 0 1120 320" role="img" aria-labelledby="title desc">
+  <title id="title">AI-Dostar — рекомендации по закупке</title>
+  <desc id="desc">История продаж, прогноз спроса и решение менеджера. Проект HackAlem для кейса Электрокомплект.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#102639"/><stop offset="1" stop-color="#061320"/></linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#294357" stroke-width="0.6"/></pattern>
+  </defs>
+  <rect width="1120" height="320" rx="22" fill="url(#bg)"/>
+  <rect x="620" width="500" height="320" rx="22" fill="url(#grid)" opacity="0.5"/>
+  <circle cx="1030" cy="50" r="155" fill="#3CE5B1" opacity="0.035"/>
+  <rect x="48" y="39" width="112" height="26" rx="13" fill="#183D44"/>
+  <text x="104" y="57" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="1.8" fill="#73EAC9">HACKALEM</text>
+  <text x="48" y="132" font-family="Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="-1" fill="#F3F7FA">AI-Dostar<tspan fill="#65E6C0">.</tspan></text>
+  <text x="50" y="175" font-family="Arial, sans-serif" font-size="23" fill="#D4E1EB">Каждому заказу — обоснование.</text>
+  <text x="50" y="207" font-family="Arial, sans-serif" font-size="15" fill="#92AABD">Прогноз спроса · Контроль менеджера · IEK / SE</text>
+  <path d="M50 254H566" stroke="#2D4659"/>
+  <text x="50" y="283" font-family="Arial, sans-serif" font-size="13" letter-spacing="1.5" fill="#88A2B7">DATA → FORECAST → DECISION</text>
+  <g font-family="Arial, sans-serif">
+    <rect x="680" y="63" width="374" height="59" rx="12" fill="#102D3D" stroke="#2C4E61"/>
+    <text x="700" y="98" font-size="19" fill="#65E6C0">01</text><text x="744" y="97" font-size="18" fill="#E6F0F6">История продаж</text>
+    <path d="M867 123V144m-5-6 5 6 5-6" fill="none" stroke="#65E6C0" stroke-width="2"/>
+    <rect x="680" y="145" width="374" height="59" rx="12" fill="#102D3D" stroke="#2C4E61"/>
+    <text x="700" y="180" font-size="19" fill="#65E6C0">02</text><text x="744" y="179" font-size="18" fill="#E6F0F6">Прогноз + факторы</text>
+    <path d="M867 205V226m-5-6 5 6 5-6" fill="none" stroke="#65E6C0" stroke-width="2"/>
+    <rect x="680" y="227" width="374" height="59" rx="12" fill="#17483F" stroke="#65E6C0"/>
+    <text x="700" y="262" font-size="19" fill="#65E6C0">03</text><text x="744" y="261" font-size="18" fill="#E6F0F6">Решение менеджера</text>
+  </g>
+</svg>

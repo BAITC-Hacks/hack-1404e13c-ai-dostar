@@ -1,0 +1,125 @@
+"""Assistant (search, pair review, recommendations) and lifecycle signals. No network."""
+
+import json
+from types import SimpleNamespace
+
+import pandas as pd
+import pytest
+
+from app import assistant, copilot, schema
+from app.adapters import CLEAN_DIR, load_clean
+from app.engine import lifecycle
+from app.mock import mock_order_lines
+from app.pipeline import run
+
+real = pytest.mark.skipif(not (CLEAN_DIR / "sales_lines.parquet").exists(), reason="data/clean not built")
+
+
+class FakeClient:
+    def __init__(self, payload):
+        self.payload, self.calls = payload, []
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
+
+    def _create(self, **kwargs):
+        self.calls.append(kwargs)
+        content = self.payload(kwargs) if callable(self.payload) else json.dumps(self.payload, ensure_ascii=False)
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
+
+
+@pytest.fixture
+def llm(monkeypatch):
+    def install(payload):
+        client = FakeClient(payload)
+        monkeypatch.setattr(copilot, "enabled", lambda: True)
+        monkeypatch.setattr(copilot, "model_name", lambda: "fake-mini")
+        monkeypatch.setattr(copilot, "_client", lambda: client)
+        return client
+    return install
+
+
+@pytest.fixture
+def lines():
+    out = mock_order_lines(30)
+    out.loc[0, ["supplier", "name", "urgency"]] = ["IEK", "УЗО АД 12 (2ф) 40А IEK", "critical"]
+    out.loc[0, "stockout_months"] = 2
+    out.loc[1, ["supplier", "name", "urgency", "flags"]] = ["SE", "Розетка Blanca", "normal", "lifecycle:declining"]
+    return out
+
+
+def test_rules_parse_supplier_urgency_terms_and_signals():
+    f = assistant.parse_rules("покажи критичные УЗО у IEK где был дефицит")
+    assert f["supplier"] == "IEK" and f["urgency"] == ["critical"]
+    assert f["name_terms"] == ["узо"] and f["stockout"] == "yes"
+    f = assistant.parse_rules("угасающие позиции которые мы заказываем")
+    assert f["lifecycle"] == "declining" and f["only_to_order"] and f["name_terms"] == []
+
+
+def test_search_without_key_uses_rules(monkeypatch, lines):
+    monkeypatch.setattr(copilot, "enabled", lambda: False)
+    result = assistant.search("критичные узо iek с дефицитом", lines)
+    assert result.source == "rules" and list(result.rows["name"]) == ["УЗО АД 12 (2ф) 40А IEK"]
+
+
+def test_search_with_llm_filter_is_validated(llm, lines):
+    client = llm({**assistant.DEFAULT_FILTER, "supplier": "SE", "lifecycle": "declining",
+                  "name_terms": ["РОЗЕТК!!"], "limit": 10_000})
+    result = assistant.search("какие розетки SE угасают", lines)
+    assert result.source == "llm:fake-mini" and result.filter["name_terms"] == ["розетк"]
+    assert result.filter["limit"] == 200 and list(result.rows["name"]) == ["Розетка Blanca"]
+    call = client.calls[0]
+    assert call["response_format"]["json_schema"]["strict"] and "recommended_qty" not in json.dumps(call["messages"])
+
+
+def test_search_llm_error_falls_back_to_rules(llm, lines):
+    llm(lambda kwargs: (_ for _ in ()).throw(TimeoutError("slow")))
+    result = assistant.search("критичные узо", lines)
+    assert result.source.startswith("rules (ошибка LLM") and len(result.rows) == 1
+
+
+def _signals():
+    return schema.conform(pd.DataFrame([{
+        "supplier": "IEK", "sku": "old", "name": "Термостат NC", "signal": "replaced_by", "related_sku": "new",
+        "related_name": "Термостат NO", "similarity": 0.96, "avg_last3": 1.0, "avg_prev9": 10.0,
+        "first_month": "2025-01", "note": lifecycle.UNVERIFIED}]), schema.LIFECYCLE)
+
+
+def test_pair_review_uses_fixed_verdicts(llm):
+    llm({"items": [{"id": "p0", "verdict": "variant", "reason": "different_parameter"}]})
+    table, source = assistant.review_pairs(_signals())
+    assert source == "llm:fake-mini" and table.iloc[0]["verdict"] == "variant"
+    assert table.iloc[0]["reason"] == assistant.REASONS["different_parameter"]
+
+
+def test_unverified_replacement_is_not_written_to_order():
+    order = mock_order_lines(3)
+    order.loc[0, ["supplier", "sku"]] = ["IEK", "old"]
+    signals = _signals()
+    assert "lifecycle" not in lifecycle.annotate(order, signals).loc[0, "flags"]
+    confirmed = lifecycle.annotate(order, signals, {("IEK", "old", "new"): "replacement"})
+    assert "lifecycle:replaced_by:new" in confirmed.loc[0, "flags"]
+    assert confirmed["recommended_qty"].equals(order["recommended_qty"])
+
+
+def test_pair_verdict_rules():
+    assert lifecycle.pair_verdict("Колодка 1,5мм2 IEK", "Колодка 2,5мм2 IEK", 0.98).startswith("вероятно вариант")
+    assert lifecycle.pair_verdict("Блок зажимов ТВ-1504 IEK", "Блок зажимов ТВ-1504 IEK NEW", 1.0) == lifecycle.CONFIRMED
+
+
+@real
+def test_lifecycle_on_real_data_is_advisory():
+    data = load_clean()
+    result = run(data)
+    signals = result.lifecycle
+    assert {"declining", "new_item"} <= set(signals["signal"])
+    flagged = result.order_lines[result.order_lines["flags"].str.contains("lifecycle:declining")]
+    assert len(flagged) > 0 and flagged["rationale"].str.contains("Угасающий спрос").all()
+    # Signals never change quantities: same numbers as without annotation.
+    plain = lifecycle.annotate(result.order_lines, signals.iloc[0:0])
+    assert plain["recommended_qty"].equals(result.order_lines["recommended_qty"])
+    fresh = signals[signals["signal"] == "new_item"].set_index(["supplier", "sku"]).index
+    declining = signals[signals["signal"] == "declining"].set_index(["supplier", "sku"]).index
+    assert not fresh.intersection(declining).isin(
+        signals[(signals["signal"] == "new_item") & signals["note"].str.startswith("первая")].set_index(
+            ["supplier", "sku"]).index).any()
+    recs = assistant.recommendations(result.order_lines, signals)
+    assert any("угасающим спросом" in r for r in recs)

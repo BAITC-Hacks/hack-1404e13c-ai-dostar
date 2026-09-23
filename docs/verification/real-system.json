@@ -1,0 +1,209 @@
+{
+  "created_at_utc": "2026-09-23T12:18:25.894057+00:00",
+  "checks": {
+    "excel_tables": {
+      "sales_lines": 248875,
+      "monthly_sales": 99561,
+      "stock_monthly": 117282,
+      "stock_now": 3577,
+      "in_transit": 313,
+      "products": 3667,
+      "seasonality": 24,
+      "manager_baseline": 497
+    },
+    "csv_conversion": {
+      "IEK": {
+        "workbooks": 6,
+        "csv_files": 6,
+        "matches_committed_csv": true
+      },
+      "Systeme electric": {
+        "workbooks": 6,
+        "csv_files": 8,
+        "matches_committed_csv": true
+      }
+    },
+    "training": {
+      "rows": 86094,
+      "products": 2523,
+      "selected_loss": "absolute_error",
+      "future_predictions_matching_production": 2698,
+      "evaluation": {
+        "metric": "mean(abs(prediction - cleaned_sales) / max(prior_12_month_mean, 1))",
+        "selected_loss": "absolute_error",
+        "candidate_validation": [
+          {
+            "loss": "poisson",
+            "rows": 13667,
+            "baseline_scaled_mae": 0.9175027386037025,
+            "ml_scaled_mae": 0.9617050432409242,
+            "improvement_pct": -4.817675498657459
+          },
+          {
+            "loss": "absolute_error",
+            "rows": 13667,
+            "baseline_scaled_mae": 0.9175027386037025,
+            "ml_scaled_mae": 0.7575752551076269,
+            "improvement_pct": 17.43073636373669
+          }
+        ],
+        "selection_target_max": "2026-07",
+        "last_month_check": {
+          "month": "2026-08",
+          "rows": 2274,
+          "baseline_scaled_mae": 0.9783423201088204,
+          "ml_scaled_mae": 0.820313743537154,
+          "improvement_pct": 16.152687390042463
+        },
+        "overall": {
+          "rows": 20507,
+          "baseline_scaled_mae": 0.9389074990792862,
+          "ml_scaled_mae": 0.7848517778576886,
+          "improvement_pct": 16.40797643779266
+        },
+        "folds": [
+          {
+            "origin": "2026-03",
+            "train_target_max": "2026-03",
+            "train_rows": 51861,
+            "rows": 6824,
+            "baseline_scaled_mae": 0.8711059985856011,
+            "ml_scaled_mae": 0.7024728670411909,
+            "improvement_pct": 19.358508817321507
+          },
+          {
+            "origin": "2026-04",
+            "train_target_max": "2026-04",
+            "train_rows": 58657,
+            "rows": 6843,
+            "baseline_scaled_mae": 0.9637706552898816,
+            "ml_scaled_mae": 0.8125246480880973,
+            "improvement_pct": 15.69315338370545
+          },
+          {
+            "origin": "2026-05",
+            "train_target_max": "2026-05",
+            "train_rows": 65513,
+            "rows": 6840,
+            "baseline_scaled_mae": 0.9816763384681463,
+            "ml_scaled_mae": 0.8393529820134039,
+            "improvement_pct": 14.497991942724253
+          }
+        ],
+        "by_supplier_unit": [
+          {
+            "supplier": "IEK",
+            "unit": "м",
+            "rows": 904,
+            "baseline_scaled_mae": 1.3217400815409317,
+            "ml_scaled_mae": 1.0855026902071812,
+            "improvement_pct": 17.8732108251069,
+            "baseline_wape": 0.6071453965904119,
+            "ml_wape": 0.47761889531347346
+          },
+          {
+            "supplier": "IEK",
+            "unit": "упак",
+            "rows": 562,
+            "baseline_scaled_mae": 0.7470420552570801,
+            "ml_scaled_mae": 0.630693716278366,
+            "improvement_pct": 15.57453668905897,
+            "baseline_wape": 0.5458841941106856,
+            "ml_wape": 0.39701083567696904
+          },
+          {
+            "supplier": "IEK",
+            "unit": "шт",
+            "rows": 14386,
+            "baseline_scaled_mae": 0.947795954964547,
+            "ml_scaled_mae": 0.8024133218750454,
+            "improvement_pct": 15.33902232099521,
+            "baseline_wape": 0.3372309059664509,
+            "ml_wape": 0.35925808570158574
+          },
+          {
+            "supplier": "SE",
+            "unit": "шт",
+            "rows": 4655,
+            "baseline_scaled_mae": 0.8602562420475759,
+            "ml_scaled_mae": 0.6908040944226606,
+            "improvement_pct": 19.697869000239578,
+            "baseline_wape": 0.4004356280250055,
+            "ml_wape": 0.3100090437983873
+          }
+        ],
+        "by_lead": [
+          {
+            "lead": 1,
+            "rows": 6861,
+            "baseline_scaled_mae": 0.8984340405872054,
+            "ml_scaled_mae": 0.7257639290594285,
+            "improvement_pct": 19.219008155002882
+          },
+          {
+            "lead": 2,
+            "rows": 6841,
+            "baseline_scaled_mae": 0.9461663983180925,
+            "ml_scaled_mae": 0.7930390813030784,
+            "improvement_pct": 16.1839732722715
+          },
+          {
+            "lead": 3,
+            "rows": 6805,
+            "baseline_scaled_mae": 0.9724167230354206,
+            "ml_scaled_mae": 0.8361952587886146,
+            "improvement_pct": 14.008548086419959
+          }
+        ],
+        "target": "Sales minus one-off excess; only months with positive opening stock. Unobserved lost demand is not ground truth.",
+        "limitations": "Overlapping test horizons; short history; positive opening stock does not prove availability throughout the month. Undated external seasonality coefficients excluded."
+      }
+    },
+    "pipelines": {
+      "statistical": {
+        "order_rows": 2482,
+        "forecast_rows": 2714,
+        "sales_rows": 248875,
+        "lifecycle_signals": 338,
+        "replacement_pairs_reviewed_by_rules": 33,
+        "search_rows": 50,
+        "exports": {
+          "IEK_csv": 678,
+          "IEK_xlsx": 678,
+          "SE_csv": 163,
+          "SE_xlsx": 163
+        },
+        "as_of": "2026-09-22"
+      },
+      "ml": {
+        "order_rows": 2482,
+        "forecast_rows": 2714,
+        "sales_rows": 248875,
+        "lifecycle_signals": 338,
+        "replacement_pairs_reviewed_by_rules": 33,
+        "search_rows": 50,
+        "exports": {
+          "IEK_csv": 574,
+          "IEK_xlsx": 574,
+          "SE_csv": 142,
+          "SE_xlsx": 142
+        },
+        "as_of": "2026-09-22"
+      }
+    },
+    "production_unchanged": {
+      "model": "0c925b997bcbd28d94c98e5934301ecd925c6d4a304569a7dbdc2cffa0a7808a",
+      "approvals": null,
+      "data": "63ccf9edd123a45f669263310a85c7879322f9445775afbf264d5498f6d48cb6"
+    },
+    "source_excel_files_unchanged": 12
+  },
+  "scope": "Actual Excel and local model; no mocked pipeline, no external API calls",
+  "live_llm": {
+    "configured": false,
+    "verified": false,
+    "reason": "External API not called by this local verification; fallback and response validation tested separately"
+  },
+  "elapsed_seconds": 116.61235449999913,
+  "status": "passed_local_checks"
+}

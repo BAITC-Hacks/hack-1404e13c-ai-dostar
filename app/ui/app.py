@@ -376,6 +376,8 @@ if st.sidebar.button("Рассчитать", type="primary", disabled=(data is N
     st.session_state.pop("check_scenarios", None)
     st.session_state.pop("detail_answer", None)
     st.session_state.pop("supplier_answer", None)
+    st.session_state.pop("assistant_found", None)
+    st.session_state.pop("pair_review", None)
 
 result = st.session_state.get("result")
 if result is None:
@@ -412,8 +414,8 @@ if result.forecast_details is not None:
             st.write(f"Последний месяц проверки {held['month']}: статистика {held['baseline_scaled_mae']:.3f}; ML {held['ml_scaled_mae']:.3f}.")
 else:
     st.caption("Прогноз: статистический. Обучаемая модель доступна в параметре «Метод прогноза».")
-tab_order, tab_product, tab_checks, tab_manager, tab_oneoffs = st.tabs(
-    ["Заказ", "Товар", "Проверки", "Сравнение с менеджером", "Разовые заказы"]
+tab_order, tab_product, tab_checks, tab_manager, tab_oneoffs, tab_assist = st.tabs(
+    ["Заказ", "Товар", "Проверки", "Сравнение с менеджером", "Разовые заказы", "Ассистент"]
 )
 with tab_order:
     order_tab(result, data)
@@ -425,3 +427,6 @@ with tab_manager:
     comparison_tab(result, data)
 with tab_oneoffs:
     oneoffs_tab(result)
+with tab_assist:
+    from app.ui import tab_assistant
+    tab_assistant.render(result)

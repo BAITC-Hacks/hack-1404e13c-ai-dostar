@@ -11,7 +11,7 @@ import pandas as pd
 
 from app import schema
 from app.adapters import load_clean
-from app.engine import demand, explain, forecast, oneoffs, replenish
+from app.engine import demand, explain, forecast, lifecycle, oneoffs, replenish
 
 
 def run(data: dict[str, pd.DataFrame] | None = None, params: schema.Params | None = None) -> schema.PipelineResult:
@@ -44,6 +44,8 @@ def run(data: dict[str, pd.DataFrame] | None = None, params: schema.Params | Non
         forecast_description = f"{method_label} (градиентный бустинг {model_id}, обучение по {model_date})"
     order_lines = explain.add_rationale(order_lines, data["products"], sales_flagged,
                                         forecast_description=forecast_description)
+    signals = lifecycle.detect(demand_monthly, data["products"], as_of)
+    order_lines = lifecycle.annotate(order_lines, signals)
     order_lines = order_lines.sort_values(["supplier", "urgency", "recommended_qty"],
                                           ascending=[True, True, False], ignore_index=True)
-    return schema.PipelineResult(order_lines, fc, demand_monthly, sales_flagged, params, as_of, details)
+    return schema.PipelineResult(order_lines, fc, demand_monthly, sales_flagged, params, as_of, details, signals)
