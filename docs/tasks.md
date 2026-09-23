@@ -88,14 +88,14 @@ class PipelineResult:
   - `growth_pct[category]` — отдельный множитель сверх тренда;
   - `sigma_daily` — по остаткам регулярного ряда;
   - переключатели `use_seasonality`, `use_trend`.
-- [ ] **2.2 Пополнение** `replenish.calc(fc, demand_monthly, stock_now, in_transit, products, params, as_of) -> ORDER_LINES` (формула уже реализована в каркасе — доработать)
+- [x] **2.2 Пополнение** `replenish.calc(fc, demand_monthly, stock_now, in_transit, products, params, as_of) -> ORDER_LINES` (формула уже реализована в каркасе — доработать)
   - `H = lead_time[supplier] + review_period`, `in_transit_H` = только поставки с `eta ≤ as_of + H`;
   - `safety = z(service_level) · sigma_daily · √lead_time`;
   - `Q_raw = max(0, forecast_H + safety − free_qty − in_transit_H)`; `Q = 0` или `pack · ceil(Q_raw/pack)`;
   - `days_of_cover = (free + transit) / avg_daily`; urgency: `< lead_time` critical, `< H` high, иначе normal;
   - нет продаж за 12 мес. → строка не нужна; нет остатка или странные данные → `flags="needs_review"`;
   - `final_qty = recommended_qty`, `status="draft"`.
-- [ ] **2.3 Обоснование** `explain.add_rationale(order_lines)` — одна строка на русском из чисел. Пример: «Регулярный спрос 12/день (исключено разовое 210 000; +18% за 2 мес. дефицита), сезонность ×1.24, на 37 дн. нужно 520 + страховой 60; есть 140, в пути 100 → 340 (кратн. 20)».
+- [x] **2.3 Обоснование** `explain.add_rationale(order_lines)` — одна строка на русском из чисел. Пример: «Регулярный спрос 12/день (исключено разовое 210 000; +18% за 2 мес. дефицита), сезонность ×1.24, на 37 дн. нужно 520 + страховой 60; есть 140, в пути 100 → 340 (кратн. 20)».
 - [x] **2.4 Приемочные тесты** (1.2 подключена; критерий №4 проверяет итоговый заказ, исправлена оценка σ) `tests/test_acceptance.py`, на реальных данных через `pipeline.run`:
   1) увеличили `in_transit` SKU → `recommended_qty` не вырос; уменьшили `free_qty` → вырос;
   2) сезонный SKU: прогноз на пиковый месяц > на спадовый;

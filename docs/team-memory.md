@@ -10,13 +10,14 @@ This file is committed with the project and read by coding agents at the start o
 
 ## Progress (обновлять при каждом push)
 
-Статус на 2026-09-23: по запросу пользователя исправлены все воспроизведённые замечания ревью, включая чужие зоны UI/copilot/forecast. Спрос 1.1–1.5, расчет и интерфейс интегрированы. Реальный режим работает из datasets и data/raw; восемь таблиц совпадают. Реальный AppTest проверил расчет, обе кнопки объяснения, утверждение/экспорт и семь сценариев. Подробности исправлений и ограничения — в разделе «Спрос».
+Статус на 2026-09-23: по запросу пользователя исправлены все воспроизведённые замечания ревью, включая чужие зоны UI/copilot/forecast. Спрос 1.1–1.5, расчет и интерфейс интегрированы. Реальный режим работает из datasets и data/raw; восемь таблиц совпадают. Реальный AppTest проверил расчет, обе кнопки объяснения, утверждение/экспорт и семь сценариев. Подробности исправлений и ограничения — в разделе «Спрос». Задачи 2.2 и 2.3 закрыты (флаги `bad_stock`/`bad_transit`/`bad_pack`, кратность и источник разовой продажи в обосновании); полный pytest на macOS — **98 passed**. Открыто только партнерское: фактический остаток IEK, сроки поставки, расхождение отчета SE.
 
 **Сделано (в `main`):**
 
 | Что | Где | Коммит |
 |---|---|---|
 | Анализ ТЗ и реальных данных, расхождения с ТЗ и допущения | `docs/architecture.md` §2 | `defea03` |
+| **Задачи 2.2, 2.3**: явные `needs_review` для некорректных остатков/поставок/кратности, правило «нет базы спроса — нет строки»; обоснование с кратностью и крупнейшей разовой строкой (дата, накладная) | `app/engine/replenish.py`, `app/engine/explain.py`, `app/pipeline.py`, `tests/test_acceptance.py` | «calc: flag invalid inputs…» |
 | MVP-архитектура на 4 часа (монолит + Streamlit); `SupplyAI_ARCHITECTURE.md` — целевая, не для хакатона | `docs/architecture.md` | `defea03` |
 | Контракт данных | `app/schema.py` | `defea03`, `960393f` |
 | Адаптеры IEK и SE → parquet (8 таблиц, ~8 с), smoke-тесты | `app/adapters/`, `tests/test_adapters.py` | `defea03` |
@@ -191,6 +192,9 @@ monthly = result.demand_monthly
 - Остаток IEK оценочный: начало месяца минус продажи, поступления неизвестны. Предупреждение и флаг обязательны; для повышения точности нужен источник фактических остатков.
 - В pandas использовать `df["flags"]`: `df.flags` — встроенный атрибут, не колонка.
 - Правило повторяемости 1.1 считает три различных месяца всего, включая месяц кандидата. Это закреплено тестами; изменять правило без пересмотра методики не нужно.
+
+- 2026-09-23: Reviewed teammate fixes `48ab2fc` + `27350f9`: copilot now returns app-authored fact statements chosen by the model via strict JSON schema (default model `gpt-4o-mini`, override `OPENAI_MODEL`); σ uses IQR/1.349; IEK lines carry `needs_review:estimated_stock` and approval requires a stock-check checkbox. Real-data AppTest: explain, supplier summary, checks, blocked approval — no exceptions. Pipe `130300792_` order is now 16 350 (was 16 400 with MAD σ).
+- 2026-09-23: Tasks 2.2/2.3 done. `explain.add_rationale(order_lines, products, sales_flagged)` — both optional; pipeline passes them.
 
 ## Продукт
 

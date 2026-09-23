@@ -202,3 +202,30 @@ def test_4_injected_one_off_does_not_inflate_order(data, base):
     unfiltered = _line(run(injected, schema.Params(use_oneoff_filter=False)), supplier, sku)
     assert abs(filtered["recommended_qty"] - before) < 0.10 * before
     assert unfiltered["recommended_qty"] > 1.3 * before
+
+
+# ---- Task 2.2 / 2.3: invalid inputs are flagged, rationale is complete ------
+
+def test_invalid_inputs_flagged_not_invented(data, target):
+    key = (data["stock_now"]["supplier"] == target.supplier) & (data["stock_now"]["sku"] == target.sku)
+    stock = data["stock_now"].copy()
+    stock.loc[key, "free_qty"] = -5.0
+    bad_transit = schema.conform(pd.DataFrame([{
+        "supplier": target.supplier, "sku": target.sku, "qty": -10.0,
+        "eta": pd.Timestamp("2026-09-30"), "order_ref": "bad"}]), schema.IN_TRANSIT)
+    products = data["products"].copy()
+    products.loc[(products["supplier"] == target.supplier) & (products["sku"] == target.sku), "pack_multiple"] = 0.0
+    changed = {**data, "stock_now": stock, "products": products,
+               "in_transit": pd.concat([data["in_transit"], bad_transit], ignore_index=True)}
+    line = _line(run(changed), target.supplier, target.sku)
+    for code in ("bad_stock", "bad_transit", "bad_pack"):
+        assert f"needs_review:{code}" in line["flags"]
+    assert line["free_qty"] == 0 and line["in_transit_H"] == target.in_transit_H
+    assert line["recommended_qty"] == pytest.approx(round(line["recommended_qty"]))  # pack 0 -> 1
+
+
+def test_rationale_has_pack_and_oneoff_source(base):
+    lines = base.order_lines.set_index(["supplier", "sku"])
+    assert "(кратн. 50)" in lines.loc[SEASONAL_SKU, "rationale"]
+    with_oneoff = base.order_lines[(base.order_lines["oneoff_excluded_qty"] > 0)]
+    assert with_oneoff["rationale"].str.contains(r"крупнейшая .* от \d{2}\.\d{2}\.\d{4}, накл\. ").all()

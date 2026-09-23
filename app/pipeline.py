@@ -26,7 +26,7 @@ def run(data: dict[str, pd.DataFrame] | None = None, params: schema.Params | Non
                            data["products"], params, as_of)
     order_lines = replenish.calc(fc, demand_monthly, data["stock_now"], data["in_transit"],
                                  data["products"], params, as_of)
-    order_lines = explain.add_rationale(order_lines)
+    order_lines = explain.add_rationale(order_lines, data["products"], sales_flagged)
     order_lines = order_lines.sort_values(["supplier", "urgency", "recommended_qty"],
                                           ascending=[True, True, False], ignore_index=True)
     return schema.PipelineResult(order_lines, fc, demand_monthly, sales_flagged, params, as_of)
