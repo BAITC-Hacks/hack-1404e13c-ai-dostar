@@ -7,9 +7,7 @@
 ```bash
 git pull
 python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
-unzip -O cp866 ~/Downloads/IEK.zip -d data/raw
-unzip -O cp866 ~/Downloads/"Systeme electric.zip" -d data/raw
-.venv/bin/python -m app.adapters.build      # -> data/clean/*.parquet
+.venv/bin/python -m app.adapters.build --raw datasets   # -> data/clean/*.parquet (исходники партнера лежат в datasets/)
 .venv/bin/python -m pytest -q               # 11 passed, 3 xfailed
 ```
 

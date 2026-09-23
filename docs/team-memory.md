@@ -10,7 +10,7 @@ This file is committed with the project and read by coding agents at the start o
 
 ## Progress (обновлять при каждом push)
 
-Статус на 2026-09-23 после `37580dd`: интегрированы спрос 1.1–1.5, прогноз, copilot и интерфейс заказа с утверждением/экспортом. Сезонность передана в `build_monthly`, устаревший `xfail` снят. Проверены 52 теста на локальных реальных данных; дополнительно AppTest обнаружил ошибки интеграции, не покрытые тестами. Полную готовность приемки пока не заявлять: замечания и воспроизведения — в разделе «Спрос», анализ обновлений ниже. Владельцы файлов — `docs/tasks.md`.
+Статус на 2026-09-23 после `37580dd`: интегрированы спрос 1.1–1.5, прогноз, copilot и интерфейс заказа с утверждением/экспортом. Сезонность передана в `build_monthly`, устаревший `xfail` снят. **Реальный режим работает и из `datasets/`**: имена книг в `datasets/IEK` исправлены, `python -m app.adapters.build --raw datasets` дает те же 8 таблиц, что и архивы партнера. 52 теста проходят; AppTest нашел ошибки интеграции, не покрытые тестами — полную готовность приемки пока не заявлять: замечания и воспроизведения — в разделе «Спрос», анализ обновлений ниже. Владельцы файлов — `docs/tasks.md`.
 
 **Сделано (в `main`):**
 
@@ -46,8 +46,8 @@ This file is committed with the project and read by coding agents at the start o
 | `engine/forecast.py` | **готово (2.1)**: сезонность с усадкой, тренд, рост, робастная σ | — |
 | `engine/replenish.py` | вся формула: в пути в горизонте, z·σ·√LT, кратность, срочность, `needs_review` | мелкие доработки → Человек 2, задача 2.2 |
 | `engine/explain.py` | шаблонное обоснование из чисел | добавить причину разового заказа → Человек 2, задача 2.3 |
-| `app/copilot.py` | `explain_line`, `supplier_summary`, fallback на шаблон | защита чисел/выбор модели → Человек 2; исправить вызов из UI → Человек 3 |
-| `app/ui/app.py`, `app/ui/state.py` | пять вкладок, параметры, редактирование, утверждение и восстановление по подписи расчета | исправить объяснение, пустую причину и сохранение исключенных строк → Человек 3 |
+| `app/copilot.py` | `explain_line`, `supplier_summary`, fallback на шаблон | защита чисел, выбор модели, `final_qty` в сводке, NaN → Человек 2; исправить вызов из UI → Человек 3 |
+| `app/ui/app.py`, `app/ui/state.py` | пять вкладок, параметры, редактирование, утверждение и восстановление по подписи расчета; проверено на реальных данных | исправить объяснение (KeyError `supplier`), пустую причину, сохранение исключенных строк, спиннер на «Сравнить факторы» (~20 с), кнопка `supplier_summary` → Человек 3 |
 | `app/export.py` | XLSX/CSV утвержденных положительных строк, защита от формул, кнопки в UI | проверено тестами продукта |
 
 **Для демо (проверено на реальных данных):**
@@ -56,13 +56,14 @@ This file is committed with the project and read by coding agents at the start o
 - Сезонность: IEK `130300792_` «Труба гибкая Ø50» — индекс 0.41 (февраль), 1.05 (июнь), 2.04 (горизонт сен–окт), тренд ×1.17, +3 373 м восстановлено за месяц дефицита → заказ 16 400 м.
 - Итог по поставщикам: IEK — к заказу 668 из 1948 позиций; SE — 169 из 534. У IEK много «критичных» из-за оценки остатка (см. Known issue в «Расчет»).
 - Сравнение с менеджером: `manager_baseline` (SE, 497 позиций) — вкладка 3.6.
+- «Проверки» на трубе Ø50 (реальные данные): все факторы 16 400; без разовых 16 450; без компенсации дефицита 14 750; без сезонности 9 550; без тренда 14 400; в пути +100 → 16 300.
 - Все must-have можно показать переключателями `Params(use_oneoff_filter / use_stockout_fix / use_seasonality / use_trend / use_in_transit)` — вкладка 3.5.
 
 **Следующие шаги:**
 
 - Человек 1 — задачи 1.1–1.5 готовы; при интеграционных вопросах — описание и тесты в разделе «Спрос». Свободен помогать с UI (вкладки «Товар», «Разовые заказы») по договоренности с Человеком 3.
 - Человек 2 — решить Known issue с остатком IEK (2.2), 2.3 обоснование (причина разового заказа), помочь UI с вкладкой 3.5 «Проверки» по договоренности.
-- Человек 3 — интерфейс и экспорт уже реализованы в `37580dd`; устранить замечания AppTest ниже. Кнопка `explain_line` подключена, но падает из-за отсутствующего поля `supplier`; `supplier_summary` пока не подключена. Для реального демо использовать проверенный набор в `data/raw`, а не некорректно подписанные книги `datasets`.
+- Человек 3 — интерфейс и экспорт уже реализованы в `37580dd`; устранить замечания AppTest ниже. Кнопка `explain_line` подключена, но падает из-за отсутствующего поля `supplier`; `supplier_summary` пока не подключена. Для реального демо собрать данные из `datasets/` (имена IEK исправлены) или из `data/raw`.
 
 ## Decisions
 
@@ -72,7 +73,8 @@ This file is committed with the project and read by coding agents at the start o
 - 2026-09-23: Real data verified: no client_id, no price, no stockout file, no lead times, no BOM; sales only warehouse «Алматы»; usable transactions from 01.2025, monthly sales/stock from 01.2024. Gaps and workarounds are listed in `docs/architecture.md` §2.
 - 2026-09-23: One-off detection unit = invoice line (`doc_id`+SKU). Control cases: IEK «Петля металлическая LOOP» 210000 шт 09.06.2025 must be excluded; SE «Установочная коробка» 36–90k шт recurring must not.
 - 2026-09-23: SE «Товар в пути» xlsx is the manager's current Excel calculation — use as baseline for comparison in the demo.
-- Raw partner xlsx live in `data/raw/` (gitignored). Unzip with `unzip -O cp866` (Cyrillic names).
+- Raw partner xlsx: committed in `datasets/` (team decision by commit `03b9ce7`), or unzipped locally into `data/raw/` (gitignored) with `unzip -O cp866` (Cyrillic names).
+- 2026-09-23: `datasets/IEK` had every workbook under the wrong name (shifted by one; MOQ and the real «Сезонность ИЭК» missing), most likely from unzipping on Windows without cp866. Fixed by replacing the files with the originals from the archive and regenerating `datasets/IEK_CSV`. Adapters pick files by name keywords, so file names must match content.
 
 - 2026-09-23: Invoice lines are the primary demand source; the monthly sales report is used only for the 2024 seasonality shape. The two disagree (SE report ≈ 50% of invoices, gap is wholesale box orders) — see `docs/architecture.md` §2.
 - 2026-09-23: `products.category` = first 4 digits of the 1C code for both suppliers; SE «Категория 2026» is kept as `manager_baseline.category_abc`. IEK current stock is estimated (Sep start stock − Sep sales), SE current stock comes from the manager file.
@@ -84,7 +86,7 @@ This file is committed with the project and read by coding agents at the start o
 
 - 2026-09-23: `python scripts/excel_to_csv.py` converts every worksheet from `C:/Hackathon/datasets/IEK` and `C:/Hackathon/datasets/Systeme electric` into UTF-8 CSV in sibling `_CSV` folders. Verified output: 5 CSV from 5 IEK books and 8 CSV from 6 SE books; requires `openpyxl` from `requirements.txt`. Source workbooks are left unchanged.
 - Setup: `python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt` (pandas 3.x works).
-- Data: unzip partner archives into `data/raw/` (`unzip -O cp866 IEK.zip -d data/raw`), then `.venv/bin/python -m app.adapters.build` → `data/clean/*.parquet` (~8 s).
+- Data: `.venv/bin/python -m app.adapters.build --raw datasets` → `data/clean/*.parquet` (~8 s). Alternative: unzip partner archives into `data/raw/` (`unzip -O cp866 IEK.zip -d data/raw`) and build without `--raw`.
 - In code: `from app.adapters import load_clean; data = load_clean()` → dict of contract tables from `app/schema.py`.
 - Tests (Linux/macOS): `.venv/bin/python -m pytest -q`. Windows: `.\.venv\Scripts\python.exe -m pytest -q`. Актуальный результат и обход ошибки временной папки — в Progress выше. Синтетические тесты спроса запускаются без данных; проверки реальных выгрузок пропускаются при отсутствии `data/clean`.
 - Pipeline: `from app.pipeline import run; r = run()` → `PipelineResult(order_lines, forecast, demand_monthly, sales_flagged, params, as_of)`; ~3 s on real data.
@@ -209,3 +211,4 @@ monthly = result.demand_monthly
 - 2026-09-23: On Windows, `.venv/Scripts/python.exe -m pytest -q tests/test_product.py` passed (3 tests); Streamlit AppTest completed the mock flow without exceptions. After the concurrent demand/calc updates, full suite without `data/clean` reports 28 passed, 24 skipped.
 - 2026-09-23: Product tab now wires the existing `app/copilot.explain_line` to an explicit per-SKU button; without an API key it displays the template fallback. Review fixes: export re-reads persisted approvals, signatures cover all immutable row fields, and clearing edited quantity gives validation instead of an exception.
 - 2026-09-23: Real UI remains blocked by source layout: `python -m app.adapters.build --raw datasets` raises `KeyError: 'Документ'` because IEK `Динамика продаж_2025-2026.xlsx` has MOQ headers. IEK `Ежемесячные остатки...xlsx` has invoice headers, `Путь ИЭК...xlsx` has monthly stock headers, and `Сезонность ИЭК.xlsx` has transit headers; an IEK seasonality workbook matching the adapter is absent. Keep adapter ownership with the data team; see README and `docs/demo.md`.
+- 2026-09-23 (Person 2): the «Real UI remains blocked» note above is resolved — `datasets/IEK` workbooks were misnamed; files fixed, real-data build and UI verified (AppTest, checks tab on IEK `130300792_`).
