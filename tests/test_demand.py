@@ -161,6 +161,28 @@ def test_empty_inputs_keep_contract():
     assert_frame_equal(monthly, schema.empty(schema.DEMAND_MONTHLY))
 
 
+def test_report_contains_traceable_oneoffs_and_typical_volume(regular_sales):
+    sales = pd.concat([regular_sales, sales_table([("2025-05-20", 1200), ("2025-06-20", 500)])],
+                      ignore_index=True)
+    flagged = oneoffs.flag_oneoffs(sales, schema.Params())
+    before = flagged.copy(deep=True)
+    report = oneoffs.report(flagged)
+    assert report.qty.tolist() == [1200, 500]
+    assert report.typical_qty.tolist() == [10, 10]
+    assert report.oneoff_excess_qty.tolist() == [1190, 490]
+    assert report.unit.eq("pcs").all()
+    assert report.oneoff_reason.str.len().gt(0).all()
+    assert list(report.columns) == ["supplier", "sku", "date", "doc_id", "unit", "qty",
+                                    "typical_qty", "oneoff_excess_qty", "oneoff_reason"]
+    assert_frame_equal(flagged, before)
+
+
+def test_report_without_oneoffs_retains_columns(regular_sales):
+    report = oneoffs.report(oneoffs.flag_oneoffs(regular_sales, schema.Params()))
+    assert report.empty
+    assert "typical_qty" in report and "doc_id" in report
+
+
 @pytest.fixture(scope="module")
 def data():
     if not all((CLEAN_DIR / f"{name}.parquet").exists() for name in schema.INPUT_TABLES):

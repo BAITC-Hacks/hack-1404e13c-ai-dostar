@@ -81,5 +81,9 @@ def flag_oneoffs(sales_lines: pd.DataFrame, params: schema.Params) -> pd.DataFra
 
 def report(sales_flagged: pd.DataFrame) -> pd.DataFrame:
     """Excluded one-off lines for the UI, largest first (task 1.4)."""
-    cols = ["supplier", "sku", "date", "doc_id", "qty", "oneoff_excess_qty", "oneoff_reason"]
-    return sales_flagged.loc[sales_flagged["is_oneoff"], cols].sort_values("qty", ascending=False)
+    cols = ["supplier", "sku", "date", "doc_id", "unit", "qty",
+            "oneoff_excess_qty", "oneoff_reason"]
+    out = sales_flagged.loc[sales_flagged["is_oneoff"], cols].copy()
+    out.insert(out.columns.get_loc("oneoff_excess_qty"), "typical_qty",
+               out["qty"] - out["oneoff_excess_qty"])
+    return out.sort_values("qty", ascending=False, kind="stable", ignore_index=True)
