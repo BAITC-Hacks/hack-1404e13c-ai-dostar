@@ -9,8 +9,8 @@ def _fmt(x: float) -> str:
     return f"{x:,.0f}".replace(",", " ") if abs(x) >= 10 else f"{x:.1f}"
 
 
-def _line(r, pack: float, oneoff: str) -> str:
-    parts = [f"Регулярный спрос {_fmt(r.avg_daily_regular)} {r.unit}/день"]
+def _line(r, pack: float, oneoff: str, forecast_description: str | None = None) -> str:
+    parts = [forecast_description or f"Регулярный спрос {_fmt(r.avg_daily_regular)} {r.unit}/день"]
     notes = []
     if r.oneoff_excluded_qty > 0:
         notes.append(f"исключено разовых {_fmt(r.oneoff_excluded_qty)}{oneoff}")
@@ -18,8 +18,9 @@ def _line(r, pack: float, oneoff: str) -> str:
         notes.append(f"+{_fmt(r.stockout_uplift_qty)} за {int(r.stockout_months)} мес. дефицита")
     if notes:
         parts[0] += f" ({'; '.join(notes)})"
-    factors = [f"{name} ×{v:.2f}" for name, v in
-               (("сезонность", r.seasonal_index), ("тренд", r.trend_factor), ("рост", r.growth_factor))
+    factor_values = (("внешний рост", r.growth_factor),) if forecast_description else (
+        ("сезонность", r.seasonal_index), ("тренд", r.trend_factor), ("рост", r.growth_factor))
+    factors = [f"{name} ×{v:.2f}" for name, v in factor_values
                if abs(v - 1) >= 0.01]
     if factors:
         parts.append(", ".join(factors))
@@ -44,7 +45,8 @@ def _largest_oneoffs(sales_flagged: pd.DataFrame | None) -> dict:
 
 
 def add_rationale(order_lines: pd.DataFrame, products: pd.DataFrame | None = None,
-                  sales_flagged: pd.DataFrame | None = None) -> pd.DataFrame:
+                  sales_flagged: pd.DataFrame | None = None, *,
+                  forecast_description: str | None = None) -> pd.DataFrame:
     """Fill `rationale` from calculated values, keeping stock uncertainty visible.
 
     Optional `products` adds the supplier pack multiple, `sales_flagged` the largest
@@ -53,6 +55,6 @@ def add_rationale(order_lines: pd.DataFrame, products: pd.DataFrame | None = Non
     out = order_lines.copy()
     packs = {} if products is None else products.set_index(["supplier", "sku"])["pack_multiple"].to_dict()
     oneoffs = _largest_oneoffs(sales_flagged)
-    out["rationale"] = [_line(r, float(packs.get((r.supplier, r.sku), 1.0) or 1.0), oneoffs.get((r.supplier, r.sku), ""))
+    out["rationale"] = [_line(r, float(packs.get((r.supplier, r.sku), 1.0) or 1.0), oneoffs.get((r.supplier, r.sku), ""), forecast_description)
                         for r in out.itertuples()]
     return out

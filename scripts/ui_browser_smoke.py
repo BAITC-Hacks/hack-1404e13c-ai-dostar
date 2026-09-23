@@ -4,11 +4,15 @@ Run the real Streamlit server on localhost:8501 first. This script only reads UI
 approval/export mutations are covered with isolated storage in test_ui_real.py.
 """
 from pathlib import Path
+import argparse
 
 from playwright.sync_api import sync_playwright, expect
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ml", action="store_true", help="Exercise the locally trained ML forecaster")
+    args = parser.parse_args()
     screenshots = Path(".pytest_cache/ui-screenshots")
     screenshots.mkdir(parents=True, exist_ok=True)
     errors = []
@@ -17,11 +21,16 @@ def main():
         page = browser.new_page(viewport={"width": 1440, "height": 1000})
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.goto("http://localhost:8501", wait_until="networkidle")
+        if args.ml:
+            page.get_by_test_id("stSidebar").get_by_role("combobox").first.click()
+            page.get_by_role("option", name="ML — обученный бустинг", exact=True).click()
         page.get_by_role("button", name="Рассчитать", exact=True).click()
         expect(page.get_by_role("tab", name="Заказ", exact=True)).to_be_visible(timeout=60000)
         expect(page.get_by_text("реальные данные Excel", exact=False)).to_be_visible()
         expect(page.get_by_role("button", name="Утвердить заказ поставщика")).to_be_visible(timeout=30000)
-        expect(page.get_by_test_id("stDataFrame").first).to_be_visible()
+        expect(page.get_by_role("tabpanel").filter(visible=True).get_by_test_id("stDataFrame").first).to_be_visible()
+        if args.ml:
+            expect(page.get_by_text("Прогноз: обученный ML", exact=False)).to_be_visible()
         page.screenshot(path=str(screenshots / "order-desktop.png"), full_page=True)
         for label in ("Товар", "Проверки", "Сравнение с менеджером", "Разовые заказы"):
             page.get_by_role("tab", name=label, exact=True).click()

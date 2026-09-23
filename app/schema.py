@@ -198,6 +198,7 @@ class Params:
     use_seasonality: bool = True
     use_trend: bool = True
     use_in_transit: bool = True
+    forecast_method: str = "statistical"  # statistical | ml; ML is trained separately
 
 
 @dataclass
@@ -208,6 +209,7 @@ class PipelineResult:
     sales_flagged: pd.DataFrame  # SALES_FLAGGED
     params: Params
     as_of: pd.Timestamp
+    forecast_details: dict | None = None  # ML provenance, validation and monthly curve
 
 
 def empty(table: dict[str, str]) -> pd.DataFrame:

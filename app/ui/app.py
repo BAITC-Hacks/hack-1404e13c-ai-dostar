@@ -31,6 +31,11 @@ def cached_data(fingerprint: tuple) -> dict[str, pd.DataFrame]:
 
 def params_sidebar(data: dict[str, pd.DataFrame] | None) -> schema.Params:
     st.sidebar.header("Параметры расчёта")
+    method = st.sidebar.selectbox("Метод прогноза", ["statistical", "ml"],
+                                  format_func=lambda value: "ML — обученный бустинг" if value == "ml" else "Статистика — сезонность и тренд")
+    ml = method == "ml"
+    if ml:
+        st.sidebar.caption("Обучение: python -m app.ml.train. Очистка и признаки модели фиксированы; рост категории и товар в пути доступны.")
     lead_iek = st.sidebar.number_input("Срок поставки IEK, дней", 1, 365, 30)
     lead_se = st.sidebar.number_input("Срок поставки SE, дней", 1, 365, 30)
     review = st.sidebar.number_input("Период пересмотра, дней", 1, 90, 7)
@@ -45,16 +50,16 @@ def params_sidebar(data: dict[str, pd.DataFrame] | None) -> schema.Params:
             )
     st.sidebar.caption("Переключатели позволяют показать вклад каждого фактора.")
     flags = {
-        "use_oneoff_filter": st.sidebar.toggle("Исключать разовые заказы", True),
-        "use_stockout_fix": st.sidebar.toggle("Оценивать спрос при дефиците", True),
-        "use_seasonality": st.sidebar.toggle("Сезонность", True),
-        "use_trend": st.sidebar.toggle("Тренд", True),
+        "use_oneoff_filter": st.sidebar.toggle("Исключать разовые заказы", True, disabled=ml, key=f"oneoffs_{method}"),
+        "use_stockout_fix": st.sidebar.toggle("Оценивать спрос при дефиците", True, disabled=ml, key=f"stockout_{method}"),
+        "use_seasonality": st.sidebar.toggle("Сезонность", True, disabled=ml, key=f"seasonality_{method}"),
+        "use_trend": st.sidebar.toggle("Тренд", True, disabled=ml, key=f"trend_{method}"),
         "use_in_transit": st.sidebar.toggle("Товар в пути", True),
     }
     return schema.Params(
         lead_time_days={"IEK": int(lead_iek), "SE": int(lead_se)},
         review_period_days=int(review), service_level=float(service),
-        growth_pct=growth, **flags,
+        growth_pct=growth, forecast_method=method, **flags,
     )
 
 
@@ -203,9 +208,18 @@ def product_tab(result: schema.PipelineResult) -> None:
         horizon = max(int(row["horizon_days"]), 1) if row is not None else 0
         future_days = pd.date_range(result.as_of + pd.Timedelta(days=1), periods=horizon, freq="D")
         days_by_month = future_days.to_series().groupby(future_days.to_period("M")).size()
-        for month, days in days_by_month.items():
-            chart.loc[month.to_timestamp(), "Прогноз"] = float(row["forecast_H"]) * days / horizon
-        st.caption("Прогноз на оставшиеся дни горизонта распределён пропорционально дням; это не прогноз полного месяца. Единица: " + str(product["unit"]))
+        if result.forecast_details is not None:
+            curve = result.forecast_details["monthly"].query("supplier == @supplier and sku == @sku and days > 0")
+            for point in curve.itertuples():
+                chart.loc[pd.Period(point.month, freq="M").to_timestamp(), "Прогноз"] = point.horizon_qty
+            st.caption("ML прогнозирует каждый месяц отдельно. На графике — доля спроса за дни горизонта. Единица: " + str(product["unit"]))
+            st.dataframe(curve[["month", "prediction", "baseline", "days", "horizon_qty", "source"]].rename(columns={
+                "month": "Месяц", "prediction": "Прогноз / полный месяц", "baseline": "Статистика / полный месяц",
+                "days": "Дней в горизонте", "horizon_qty": "Спрос за дни горизонта с ростом", "source": "Метод"}), hide_index=True)
+        else:
+            for month, days in days_by_month.items():
+                chart.loc[month.to_timestamp(), "Прогноз"] = float(row["forecast_H"]) * days / horizon
+            st.caption("Прогноз на оставшиеся дни горизонта распределён пропорционально дням; это не прогноз полного месяца. Единица: " + str(product["unit"]))
         plot = chart.sort_index().reset_index(names="date").melt("date", var_name="series", value_name="qty").dropna()
         events = monthly.loc[monthly["stockout"] | monthly["oneoff_excluded_qty"].gt(0)].reset_index()
         events["event"] = ["Разовая продажа + дефицит" if r.stockout and r.oneoff_excluded_qty > 0 else ("Дефицит" if r.stockout else "Разовая продажа") for r in events.itertuples()]
@@ -240,6 +254,8 @@ def product_tab(result: schema.PipelineResult) -> None:
     if detail and detail[0] == detail_key:
         st.write(detail[1].text)
         st.caption(f"Источник: {detail[1].source}")
+    if result.forecast_details is not None:
+        st.caption("Спрос/день, сезонность и тренд ниже — ориентиры статистического метода, не разложение ML-прогноза. Страховой запас — историческая оценка, не доверительный интервал ML.")
     st.dataframe(pd.DataFrame({"Показатель": ["Спрос/день", "Сезонность", "Тренд", "Рост", "Горизонт",
                                                "Прогноз", "Страховой запас", "Свободный остаток", "В пути",
                                                "Рекомендация"],
@@ -250,6 +266,8 @@ def product_tab(result: schema.PipelineResult) -> None:
 
 
 def checks_tab(result: schema.PipelineResult, data: dict[str, pd.DataFrame]) -> None:
+    if result.forecast_details is not None:
+        st.info("Таблица ниже проверяет факторы статистического метода. Качество ML — в блоке «Проверка ML» над вкладками.")
     selected = selected_product(st.session_state.order_lines, "checks_sku")
     if selected is None:
         return
@@ -264,7 +282,7 @@ def checks_tab(result: schema.PipelineResult, data: dict[str, pd.DataFrame]) -> 
 
 def calculate_checks(result, data, selected, extra):
     supplier, sku = selected
-    enabled = replace(result.params, as_of=result.as_of, use_oneoff_filter=True, use_stockout_fix=True,
+    enabled = replace(result.params, forecast_method="statistical", as_of=result.as_of, use_oneoff_filter=True, use_stockout_fix=True,
                       use_seasonality=True, use_trend=True, use_in_transit=True)
     baseline = run(data, enabled).order_lines.query("supplier == @supplier and sku == @sku")
     if baseline.empty:
@@ -344,8 +362,12 @@ except (FileNotFoundError, OSError) as exc:
     st.info("Запустите: python -m app.adapters.build --raw datasets")
 params = params_sidebar(data)
 if st.sidebar.button("Рассчитать", type="primary", disabled=(data is None)):
-    with st.spinner("Расчёт рекомендаций по реальным Excel…"):
-        result = run(data, params)
+    try:
+        with st.spinner("Расчёт рекомендаций по реальным Excel…"):
+            result = run(data, params)
+    except ValueError as exc:
+        st.error(str(exc))
+        st.stop()
     st.session_state.result = result
     st.session_state.order_lines = apply_saved(result.order_lines, result.as_of, STATE_FILE)
     st.session_state.result_data = data
@@ -366,6 +388,30 @@ data = st.session_state.result_data
 if params != result.params:
     st.warning("Параметры изменены. Нажмите «Рассчитать», чтобы обновить заказ и проверки.")
 st.caption(f"Расчёт на {result.as_of.date()} · реальные данные Excel · {len(result.sales_flagged):,} строк продаж")
+if result.forecast_details is not None:
+    meta = result.forecast_details["metadata"]
+    st.success(f"Прогноз: обученный ML · {meta['model']} · обучение по {meta['trained_through']} · {meta['training_rows']:,} примеров")
+    if result.forecast_details["monthly"].query("days > 0")["source"].ne("ML").any():
+        st.warning("ML обучен на 1–3 месяца вперёд от конца последнего полного месяца. Более дальние месяцы рассчитаны статистически и помечены в карточке товара.")
+    with st.expander("Проверка ML на отложенных месяцах"):
+        report = meta["evaluation"]
+        st.write("Ошибка — средняя абсолютная ошибка, делённая на предыдущий средний объём товара. Меньше — лучше; это не процент точности.")
+        st.dataframe(pd.DataFrame(report["folds"]), hide_index=True)
+        st.dataframe(pd.DataFrame(report["by_supplier_unit"]), hide_index=True)
+        worse = [f"{g['supplier']} ({g['unit']})" for g in report["by_supplier_unit"]
+                 if g["ml_wape"] is not None and g["baseline_wape"] is not None and g["ml_wape"] > g["baseline_wape"]]
+        if worse:
+            st.warning("По объёмно-взвешенной ошибке WAPE ML хуже статистики: " + ", ".join(worse)
+                       + ". Общий выигрыш по нормированной ошибке не означает улучшение каждой группы.")
+        st.caption("Сравнение со статистическим алгоритмом без недатированных коэффициентов компании. Проверяются очищенные продажи при положительном начальном остатке; истинный упущенный спрос неизвестен. Горизонты проверок частично пересекаются.")
+        st.write(f"Средняя ошибка: статистика {report['overall']['baseline_scaled_mae']:.3f}; ML {report['overall']['ml_scaled_mae']:.3f}.")
+        if report["overall"]["ml_scaled_mae"] >= report["overall"]["baseline_scaled_mae"]:
+            st.warning("На проверочных периодах ML не улучшил выбранную метрику. Рекомендуется статистический метод до следующего обучения/проверки.")
+        if "last_month_check" in report:
+            held = report["last_month_check"]
+            st.write(f"Последний месяц проверки {held['month']}: статистика {held['baseline_scaled_mae']:.3f}; ML {held['ml_scaled_mae']:.3f}.")
+else:
+    st.caption("Прогноз: статистический. Обучаемая модель доступна в параметре «Метод прогноза».")
 tab_order, tab_product, tab_checks, tab_manager, tab_oneoffs = st.tabs(
     ["Заказ", "Товар", "Проверки", "Сравнение с менеджером", "Разовые заказы"]
 )

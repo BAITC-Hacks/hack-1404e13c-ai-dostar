@@ -6,3 +6,4 @@ pyarrow
 streamlit>=1.64
 pytest
 openai
+scikit-learn>=1.6,<2
