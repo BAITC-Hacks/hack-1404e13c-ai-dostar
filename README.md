@@ -57,9 +57,34 @@
 
 ## Быстрый запуск
 
-Нужны **Python 3.12+**, Git и доступ к репозиторию. Команды выполняются из его корня; OpenAI API-ключ для расчёта и интерфейса не требуется.
+### 🐳 Docker — рекомендуемый способ
 
-### Windows · PowerShell
+Нужны только **Git** и **Docker** (Docker Desktop на Windows/macOS или Docker Engine + Compose v2.24+ на Linux). Python ставить не нужно.
+
+```bash
+git clone https://github.com/BAITC-Hacks/hack-1404e13c-ai-dostar.git
+cd hack-1404e13c-ai-dostar
+docker compose up --build
+```
+
+Откройте **[localhost:8501](http://localhost:8501)** и нажмите **«Рассчитать»**. Первая сборка занимает несколько минут: в образ ставятся зависимости, из `datasets/` собираются таблицы и обучается ML-модель. Следующие запуски — `docker compose up` (сразу), остановка — `Ctrl+C` или `docker compose down`.
+
+| Нужно | Как |
+|---|---|
+| ChatGPT для ассистента | Положить рядом `.env` по образцу [.env.example](.env.example) (`OPENAI_API_KEY=...`) и запустить `docker compose up`. Ключ передаётся как переменная окружения и **не попадает в образ**. Без `.env` всё работает, ассистент — по правилам |
+| Быстрее собрать без ML | `docker compose build --build-arg TRAIN_ML=0 && docker compose up` — статистический метод доступен, ML нет |
+| Другой порт | В `docker-compose.yml` заменить `"8501:8501"` на, например, `"8080:8501"` |
+| Работа в фоне | `docker compose up -d --build`, логи — `docker compose logs -f` |
+| Сбросить утверждения | `docker compose down -v` (утверждения хранятся в томе `approvals` и переживают перезапуск) |
+| Обновить после `git pull` | `docker compose up --build` |
+
+Нужно ~3 ГБ свободного места на диске для образа.
+
+### Без Docker · Python 3.12+
+
+Команды выполняются из корня репозитория; OpenAI API-ключ для расчёта и интерфейса не требуется.
+
+#### Windows · PowerShell
 
 ```powershell
 git clone https://github.com/BAITC-Hacks/hack-1404e13c-ai-dostar.git
@@ -73,7 +98,7 @@ python -m venv .venv
 Откройте **[localhost:8501](http://localhost:8501)** и нажмите **«Рассчитать»**. Статистический метод доступен сразу после сборки данных.
 
 <details>
-<summary><strong>Linux / macOS</strong></summary>
+<summary><strong>Linux / macOS без Docker</strong></summary>
 
 ```bash
 git clone https://github.com/BAITC-Hacks/hack-1404e13c-ai-dostar.git

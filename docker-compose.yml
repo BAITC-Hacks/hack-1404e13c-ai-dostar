@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        TRAIN_ML: "1"          # "0" = skip ML training, faster image build
+    image: ai-dostar:latest
+    container_name: ai-dostar
+    ports:
+      - "8501:8501"
+    env_file:
+      - path: .env             # OPENAI_API_KEY / OPENAI_MODEL; optional, never baked into the image
+        required: false
+    volumes:
+      - approvals:/app/data/state   # manager approvals survive container restarts
+    restart: unless-stopped
+
+volumes:
+  approvals:

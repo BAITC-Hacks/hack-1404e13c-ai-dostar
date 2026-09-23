@@ -101,9 +101,12 @@ This file is committed with the project and read by coding agents at the start o
 - 2026-09-23: Git: work directly on `main`, `git add` only own files, `git pull --rebase` + pytest before push, commit prefixes `demand:` / `calc:` / `ui:`. `app/schema.py` columns may be added, never renamed or removed.
 - 2026-09-23: Approvals are stored in `data/state/approvals.json` (gitignored). No automatic sending to suppliers.
 
+- 2026-09-23: Docker is the primary run path: `Dockerfile` (python:3.12-slim; builds data/clean from `datasets/` and trains ML at image build, `--build-arg TRAIN_ML=0` to skip; non-root user; healthcheck), `docker-compose.yml` (port 8501, optional `.env` via `env_file required:false` — needs Compose ≥ 2.24, volume `approvals` for data/state), `.dockerignore` (excludes .env, data/, .git, .venv, CSV copies, docs, notebooks, tests). Not built locally: the author's Mac disk was full (1.7 GB free) and Docker Desktop storage returned I/O errors; every command inside the Dockerfile was verified natively.
+
 ## Working commands
 
 - 2026-09-23: `python scripts/excel_to_csv.py` converts every worksheet from `C:/Hackathon/datasets/IEK` and `C:/Hackathon/datasets/Systeme electric` into UTF-8 CSV in sibling `_CSV` folders. Verified output: 5 CSV from 5 IEK books and 8 CSV from 6 SE books; requires `openpyxl` from `requirements.txt`. Source workbooks are left unchanged.
+- Docker: `docker compose up --build` → http://localhost:8501 (first build installs deps, builds data, trains ML).
 - Setup: `python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt` (pandas 3.x works).
 - Data: `.venv/bin/python -m app.adapters.build --raw datasets` → `data/clean/*.parquet` (~8 s). Alternative: unzip partner archives into `data/raw/` (`unzip -O cp866 IEK.zip -d data/raw`) and build without `--raw`.
 - In code: `from app.adapters import load_clean; data = load_clean()` → dict of contract tables from `app/schema.py`.
