@@ -8,6 +8,43 @@ This file is committed with the project and read by coding agents at the start o
 - Purpose: HackAlem AI case «Электрокомплект» — сервис рекомендованных заказов поставщикам (IEK, Systeme Electric).
 - Architecture for the 4h MVP: `docs/architecture.md` (Python modular monolith + Streamlit, no DB/microservices). The long `SupplyAI_ARCHITECTURE.md` is the post-hackathon target; its domain rules are folded into `docs/architecture.md`.
 
+## Progress (обновлять при каждом push)
+
+Статус на 2026-09-23, после коммита `960393f`. Подробные задачи и владельцы — `docs/tasks.md`.
+
+**Сделано (в `main`):**
+
+| Что | Где | Коммит |
+|---|---|---|
+| Анализ ТЗ и реальных данных, расхождения с ТЗ и допущения | `docs/architecture.md` §2 | `defea03` |
+| MVP-архитектура на 4 часа (монолит + Streamlit); `SupplyAI_ARCHITECTURE.md` — целевая, не для хакатона | `docs/architecture.md` | `defea03` |
+| Контракт данных | `app/schema.py` | `defea03`, `960393f` |
+| Адаптеры IEK и SE → parquet (8 таблиц, ~8 с), smoke-тесты | `app/adapters/`, `tests/test_adapters.py` | `defea03` |
+| Разделение на 3 человека, владение файлами, таймлайн, правила git, шаблон промпта | `docs/tasks.md` | `d2b98bc` |
+| **Задача 2.0**: каркас движка, `pipeline.run()` работает на реальных данных (~3 с) | `app/engine/`, `app/pipeline.py` | `960393f` |
+| Заготовки для Продукта: Streamlit (мок ↔ реальный расчет), мок, экспорт, copilot | `app/ui/app.py`, `app/mock.py`, `app/export.py`, `app/copilot.py` | `960393f` |
+| Тесты приемки (must-have 2–4 пока `xfail`) | `tests/test_acceptance.py`, `tests/test_demand.py` | `960393f` |
+
+**Тесты сейчас:** 11 passed, 3 xfailed. Каждый `xfail` = невыполненный must-have: сезонность (2.1), дефициты (1.2), Петля/Коробки (1.1).
+
+**Что в каркасе заглушка, а что уже настоящее:**
+
+| Модуль | Настоящее | Заглушка → кто делает |
+|---|---|---|
+| `engine/oneoffs.py` | контракт, `report()` | разовые не помечаются → Человек 1, задача 1.1 |
+| `engine/demand.py` | сетка месяцев 2025-01..as_of, нетто продажи, вычет разовых, флаг stockout, неполный текущий месяц | uplift за дефицит = 0 → Человек 1, задача 1.2 |
+| `engine/forecast.py` | среднее за 12 полных мес., рост по категории, горизонт | сезонность = тренд = 1, σ грубая → Человек 2, задача 2.1 |
+| `engine/replenish.py` | вся формула: в пути в горизонте, z·σ·√LT, кратность, срочность, `needs_review` | доработать σ/страховой → Человек 2, задача 2.2 |
+| `engine/explain.py` | шаблонное обоснование из чисел | формулировки → Человек 2, задача 2.3 |
+| `app/ui/app.py` | таблица по поставщикам, переключатель мок/реальные | вкладки, редактирование, утверждение → Человек 3, 3.1–3.7 |
+| `app/export.py` | `to_table`, `to_xlsx`, защита от формул | кнопки в UI → Человек 3, 3.3 |
+
+**Следующие шаги:**
+
+- Человек 1 — 1.1 разовые заказы (снять `xfail` с `test_4_loop_one_off_excluded`), затем 1.2 uplift (`test_3_stockout_fix_raises_demand`).
+- Человек 2 — 2.1 сезонность и тренд (`test_2_seasonality_changes_forecast`), разобраться со страховым запасом.
+- Человек 3 — 3.1–3.3 на моке; в 1:10 выключить «Мок-данные» и работать с `pipeline.run()`.
+
 ## Decisions
 
 - 2026-09-23: Team memory lives in this Markdown file and is shared through Git. No Mem0 account or plugin is required for this repository. The repo-level Codex config disables an already-installed Mem0 plugin here.
@@ -30,7 +67,9 @@ This file is committed with the project and read by coding agents at the start o
 - Setup: `python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt` (pandas 3.x works).
 - Data: unzip partner archives into `data/raw/` (`unzip -O cp866 IEK.zip -d data/raw`), then `.venv/bin/python -m app.adapters.build` → `data/clean/*.parquet` (~8 s).
 - In code: `from app.adapters import load_clean; data = load_clean()` → dict of contract tables from `app/schema.py`.
-- Tests: `.venv/bin/python -m pytest -q` (adapter smoke tests skip if data/clean is missing).
+- Tests: `.venv/bin/python -m pytest -q` (tests skip if data/clean is missing). After task 2.0: 11 passed, 3 xfailed (xfail = must-have waiting for its engine step; remove the xfail mark when it passes).
+- Pipeline: `from app.pipeline import run; r = run()` → `PipelineResult(order_lines, forecast, demand_monthly, sales_flagged, params, as_of)`; ~3 s on real data.
+- UI: `.venv/bin/streamlit run app/ui/app.py` (sidebar toggle «Мок-данные» switches mock ↔ real pipeline).
 
 ## Open questions
 
@@ -44,7 +83,10 @@ This file is committed with the project and read by coding agents at the start o
 
 ## Расчет
 
-(Person 2 notes)
+- 2026-09-23: Task 2.0 skeleton pushed. Engine files exist with working stubs: `flag_oneoffs` flags nothing, `build_monthly` builds the month grid 2025-01..as_of with stockout flag but uplift = 0, `forecast` = 12-month average with seasonal_index = trend = 1, `replenish.calc` implements the full formula (horizon transit, z·σ·√LT safety, pack rounding, urgency, needs_review when stock is missing), `explain` builds a template rationale.
+- `as_of` defaults to the last sale date (2026-09-22). Every engine function takes `(…, params, as_of)`.
+- Known issue for 2.1/2.2: with σ from monthly std, safety stock is often larger than forecast_H for volatile SKUs (e.g. IEK pipes) — revisit σ once one-offs and seasonality are in.
+- Stub result: 2460 SKUs with demand, 1040 with recommended_qty > 0.
 
 ## Продукт
 

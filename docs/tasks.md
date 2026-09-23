@@ -10,7 +10,7 @@ python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
 unzip -O cp866 ~/Downloads/IEK.zip -d data/raw
 unzip -O cp866 ~/Downloads/"Systeme electric.zip" -d data/raw
 .venv/bin/python -m app.adapters.build      # -> data/clean/*.parquet
-.venv/bin/python -m pytest -q               # 7 passed
+.venv/bin/python -m pytest -q               # 11 passed, 3 xfailed
 ```
 
 ## 1. Кто чем владеет
@@ -70,21 +70,25 @@ class PipelineResult:
     forecast: pd.DataFrame         # FORECAST
     demand_monthly: pd.DataFrame   # DEMAND_MONTHLY
     sales_flagged: pd.DataFrame    # SALES_FLAGGED — для графиков и списка разовых заказов
+    params: Params
+    as_of: pd.Timestamp            # дата расчета, по умолчанию последняя продажа (2026-09-22)
 ```
+
+Каркас (2.0) уже в `main`: все функции существуют и возвращают таблицы по контракту, `pipeline.run()` работает на реальных данных. Каждый заменяет заглушку в своих файлах. Тесты с `xfail` в `tests/test_acceptance.py` — это must-have, которые ждут вашей реализации: когда тест начинает проходить, снимите с него `xfail`.
 
 ## 3. Задачи
 
 ### Человек 2 — Расчет (начинает первым: он разблокирует остальных)
 
-- [ ] **2.0 Каркас (к 0:15, один коммит, сразу push).** Добавить в `schema.py` `SALES_FLAGGED`, `DEMAND_MONTHLY`, `FORECAST`, `PipelineResult`. Создать все файлы движка с правильными сигнатурами и **рабочими заглушками**: `flag_oneoffs` ставит `is_oneoff=False`, `build_monthly` агрегирует накладные по месяцам (`qty_regular = qty_raw`), `forecast` берет среднее, `calc` считает `Q = forecast_H − free − transit`. `pipeline.run` проходит от начала до конца. Создать пустые `tests/test_demand.py`, `app/ui/app.py`, `app/mock.py`, чтобы никто не создавал их параллельно.
-- [ ] **2.1 Прогноз** `forecast.forecast(demand_monthly, monthly_sales, seasonality, products, params) -> FORECAST`
+- [x] **2.0 Каркас (к 0:15, один коммит, сразу push).** Добавить в `schema.py` `SALES_FLAGGED`, `DEMAND_MONTHLY`, `FORECAST`, `PipelineResult`. Создать все файлы движка с правильными сигнатурами и **рабочими заглушками**: `flag_oneoffs` ставит `is_oneoff=False`, `build_monthly` агрегирует накладные по месяцам (`qty_regular = qty_raw`), `forecast` берет среднее, `calc` считает `Q = forecast_H − free − transit`. `pipeline.run` проходит от начала до конца. Создать пустые `tests/test_demand.py`, `app/ui/app.py`, `app/mock.py`, чтобы никто не создавал их параллельно.
+- [ ] **2.1 Прогноз** `forecast.forecast(demand_monthly, monthly_sales, seasonality, products, params, as_of) -> FORECAST`
   - база — средний `qty_regular` за последние 6–12 полных месяцев, десезонированный;
   - сезонный индекс SKU по месяцам горизонта: форма из `monthly_sales` 2024–2026 (нормированная, не уровень) + накладные; при коротком или редком ряде сжимать к `seasonality` компании (`w = n/(n+k)`);
   - тренд — наклон по десезонированным последним 12 мес., ограничить (например, 0.7–1.3);
   - `growth_pct[category]` — отдельный множитель сверх тренда;
   - `sigma_daily` — по остаткам регулярного ряда;
   - переключатели `use_seasonality`, `use_trend`.
-- [ ] **2.2 Пополнение** `replenish.calc(forecast, stock_now, in_transit, products, params) -> ORDER_LINES`
+- [ ] **2.2 Пополнение** `replenish.calc(fc, demand_monthly, stock_now, in_transit, products, params, as_of) -> ORDER_LINES` (формула уже реализована в каркасе — доработать)
   - `H = lead_time[supplier] + review_period`, `in_transit_H` = только поставки с `eta ≤ as_of + H`;
   - `safety = z(service_level) · sigma_daily · √lead_time`;
   - `Q_raw = max(0, forecast_H + safety − free_qty − in_transit_H)`; `Q = 0` или `pack · ceil(Q_raw/pack)`;
@@ -111,7 +115,7 @@ class PipelineResult:
   - `oneoff_excess_qty = qty − median` (срезаем до типичной строки, а не удаляем), `oneoff_reason` — текст с цифрами;
   - `use_oneoff_filter=False` → все `is_oneoff=False`.
   - Контрольные случаи: IEK `130200305_` «Петля LOOP» 210 000 шт 09.06.2025 → **разовый**; SE `030200192_` «Установочная коробка» строки 36–90 тыс. → **не разовый**.
-- [ ] **1.2 Месячный ряд** `demand.build_monthly(sales_flagged, stock_monthly, params) -> DEMAND_MONTHLY`
+- [ ] **1.2 Месячный ряд** `demand.build_monthly(sales_flagged, stock_monthly, params, as_of) -> DEMAND_MONTHLY` (сетка месяцев и флаг stockout уже есть — добавить uplift)
   - агрегировать накладные с 2025-01 по `as_of` (возвраты вычитаются, отрицательный месяц → 0);
   - текущий неполный месяц: заполнить `days_in_month_observed`, чтобы прогноз мог масштабировать;
   - `stockout = stock_monthly.qty_start ≤ 0` в этом месяце **и** продажи ниже нормы;
