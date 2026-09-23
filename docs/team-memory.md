@@ -10,7 +10,7 @@ This file is committed with the project and read by coding agents at the start o
 
 ## Progress (обновлять при каждом push)
 
-Статус на 2026-09-23: готовы 2.0, 2.1, 2.4, copilot (Человек 2) и 1.1–1.5 (Человек 1). Весь расчет закрыт и проверен тестами, осталось UI. Сезонность передана в `build_monthly`, устаревший `xfail` снят. Подробная передача результатов спроса — раздел «Спрос» ниже; владельцы файлов — `docs/tasks.md`.
+Статус на 2026-09-23: расчет, copilot и задачи «Спрос» объединены с UI человека 3. Мок-режим UI проверен; реальный запуск на файлах из `datasets/` блокируется несоответствием содержимого IEK-книг их названиям (см. раздел «Продукт»). Подробные задачи и владельцы — `docs/tasks.md`.
 
 **Сделано (в `main`):**
 
@@ -33,8 +33,9 @@ This file is committed with the project and read by coding agents at the start o
 | **Copilot** (ChatGPT): объяснение строки и сводка по поставщику с защитой от выдуманных чисел | `app/copilot.py`, `tests/test_copilot.py`, `.env.example` | «calc: copilot…» |
 | **Задача 2.4**: приемка must-have №1 по каждому источнику (в пути, поздний приход, остаток, продажи, рост категории, кратность, отчет 2024, сезонность компании, история остатков) и №4 (вколотая строка ×50) | `tests/test_acceptance.py` | «calc: copilot…» |
 | Конвертер xlsx → csv (Windows-пути `C:/Hackathon/datasets`) — вспомогательный, pipeline читает xlsx через адаптеры | `scripts/excel_to_csv.py` | `d3c84ef` |
+| **Продукт 3.1–3.8, 3.10**: пять вкладок Streamlit, редактирование и утверждение, экспорт CSV/XLSX, сравнение факторов и менеджера, README и сценарий демо; кнопка copilot 3.9 подключена | `app/ui/`, `app/export.py`, `README.md`, `docs/demo.md`, `tests/test_product.py` | `37580dd` |
 
-**Тесты сейчас:** 49 passed, 0 xfail (~55 с). Расчетные must-have №1–№4 закрыты и проверены тестами. №5 (группировка по поставщику, утверждение, экспорт) закрывается интерфейсом 3.2–3.3.
+**Последняя проверка на Windows без `data/clean`:** 28 passed, 24 skipped (2026-09-23). Три теста продукта покрывают сохранение утверждений и экспорт; Streamlit AppTest прошел мок-сценарий. Часть интеграционных проверок требует подготовленных реальных таблиц и здесь пропущена.
 
 **Состояние модулей:**
 
@@ -45,9 +46,9 @@ This file is committed with the project and read by coding agents at the start o
 | `engine/forecast.py` | **готово (2.1)**: сезонность с усадкой, тренд, рост, робастная σ | — |
 | `engine/replenish.py` | вся формула: в пути в горизонте, z·σ·√LT, кратность, срочность, `needs_review` | мелкие доработки → Человек 2, задача 2.2 |
 | `engine/explain.py` | шаблонное обоснование из чисел | добавить причину разового заказа → Человек 2, задача 2.3 |
-| `app/copilot.py` | **готово**: `explain_line`, `supplier_summary`, fallback на шаблон | кнопки в UI → Человек 3 |
-| `app/ui/app.py` | только таблица по поставщикам, переключатель мок/реальные | **всё остальное** → Человек 3, 3.1–3.7 (критический путь) |
-| `app/export.py` | `to_table`, `to_xlsx`, защита от формул | кнопки в UI → Человек 3, 3.3 |
+| `app/copilot.py` | **готово**: `explain_line`, `supplier_summary`, fallback на шаблон | `explain_line` подключен во вкладке «Товар»; сводка по поставщику пока без кнопки |
+| `app/ui/app.py` | **готово**: заказ, товар, проверки, сравнение с менеджером, разовые строки, параметры расчета, явный запуск pipeline или мока | реальный экран проверить после подготовки `data/clean` |
+| `app/export.py` | **готово**: экспорт только утвержденных положительных строк в CSV/XLSX, защита от формул | — |
 
 **Для демо (проверено на реальных данных):**
 
@@ -61,7 +62,7 @@ This file is committed with the project and read by coding agents at the start o
 
 - Человек 1 — задачи 1.1–1.5 готовы; при интеграционных вопросах — описание и тесты в разделе «Спрос». Свободен помогать с UI (вкладки «Товар», «Разовые заказы») по договоренности с Человеком 3.
 - Человек 2 — решить Known issue с остатком IEK (2.2), 2.3 обоснование (причина разового заказа), помочь UI с вкладкой 3.5 «Проверки» по договоренности.
-- Человек 3 — **критический путь**: 3.1–3.3 сразу на `pipeline.run()`, затем 3.5 «Проверки». Подключать `PipelineResult.demand_monthly`, `sales_flagged` и `oneoffs.report()` (поля — в разделе «Спрос»). Кнопки copilot: `copilot.explain_line(row)` в карточке товара и `copilot.supplier_summary(order_lines, supplier)` над кнопкой «Утвердить» (пример в docstring `app/copilot.py`).
+- Человек 3 — после восстановления `data/clean` прогнать все вкладки на реальных данных и сценарий `docs/demo.md`; при желании добавить `copilot.supplier_summary(order_lines, supplier)` над утверждением заказа.
 
 ## Decisions
 
@@ -85,9 +86,10 @@ This file is committed with the project and read by coding agents at the start o
 - Setup: `python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt` (pandas 3.x works).
 - Data: unzip partner archives into `data/raw/` (`unzip -O cp866 IEK.zip -d data/raw`), then `.venv/bin/python -m app.adapters.build` → `data/clean/*.parquet` (~8 s).
 - In code: `from app.adapters import load_clean; data = load_clean()` → dict of contract tables from `app/schema.py`.
-- Tests (Linux/macOS): `.venv/bin/python -m pytest -q`. Windows: `.\.venv\Scripts\python.exe -m pytest -q`. Последний полный результат: 34 passed, 1 xpassed. Синтетические тесты спроса запускаются без данных; проверки реальных выгрузок пропускаются при отсутствии `data/clean`.
+- Tests (Linux/macOS): `.venv/bin/python -m pytest -q`. Windows: `.\.venv\Scripts\python.exe -m pytest -q`. На Windows без `data/clean`: 28 passed, 24 skipped; интеграционные проверки реальных выгрузок требуют подготовленных parquet.
 - Pipeline: `from app.pipeline import run; r = run()` → `PipelineResult(order_lines, forecast, demand_monthly, sales_flagged, params, as_of)`; ~3 s on real data.
 - UI: `.venv/bin/streamlit run app/ui/app.py` (sidebar toggle «Мок-данные» switches mock ↔ real pipeline).
+- UI on Windows: `.venv\Scripts\python.exe -m streamlit run app/ui/app.py --server.port=8501`; 2026-09-23 сервер отвечал HTTP 200 на `http://localhost:8501`. Для просмотра без `data/clean` включить «Мок-данные» и нажать «Рассчитать».
 
 ## Open questions
 
