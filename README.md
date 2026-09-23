@@ -11,7 +11,7 @@
 ![ML](https://img.shields.io/badge/ML-Gradient%20Boosting-16A085)
 ![Export](https://img.shields.io/badge/Export-XLSX%20%2F%20CSV-2563EB)
 
-[Запуск](#быстрый-запуск) · [Docker](docs/docker.md) · [Возможности](#шесть-экранов-один-процесс-закупки) · [ML](#два-метода-прогноза) · [Демо](docs/demo.md) · [Проверки системы](docs/system-verification.md) · [Документация](#документация-и-команда)
+[Запуск](#быстрый-запуск) · [Docker](docs/docker.md) · [Деплой](#деплой-в-интернет) · [Возможности](#шесть-экранов-один-процесс-закупки) · [ML](#два-метода-прогноза) · [Демо](docs/demo.md) · [Проверки системы](docs/system-verification.md) · [Документация](#документация-и-команда)
 
 </div>
 
@@ -57,9 +57,33 @@
 
 ## Быстрый запуск
 
-Нужны **Python 3.12+**, Git и доступ к репозиторию. Команды выполняются из его корня; OpenAI API-ключ для расчёта и интерфейса не требуется.
+### 🐳 Docker — рекомендуемый способ
 
-### Windows · PowerShell
+Нужны только **Git** и **Docker** (Docker Desktop на Windows/macOS или Docker Engine с Compose v2 на Linux). Python ставить не нужно.
+
+```bash
+git clone --branch ml/demand-forecast https://github.com/BAITC-Hacks/hack-1404e13c-ai-dostar.git
+cd hack-1404e13c-ai-dostar
+docker compose up --build
+```
+
+Откройте **[127.0.0.1:8502](http://127.0.0.1:8502)** и нажмите **«Рассчитать»**. Первая сборка занимает несколько минут: в образ ставятся зависимости, из `datasets/` собираются таблицы и обучается ML-модель. Следующие запуски — `docker compose up`, остановка — `Ctrl+C` или `docker compose down`. Конфигурация — `compose.yaml`; подробности и проверка образа — [Docker](docs/docker.md).
+
+| Нужно | Как |
+|---|---|
+| ChatGPT для ассистента | Положить рядом `.env` по образцу [.env.example](.env.example) (`OPENAI_API_KEY=...`) и запустить `docker compose up`. Ключ передаётся как переменная окружения и **не попадает в образ**. Без `.env` всё работает, ассистент — по правилам |
+| Другой порт | Задать переменную `AIDOSTAR_PORT`, например `8080`; привязка остаётся к локальному `127.0.0.1` |
+| Работа в фоне | `docker compose up -d --build`, логи — `docker compose logs -f` |
+| Сбросить утверждения | `docker compose down -v` (утверждения хранятся в томе `approvals` и переживают перезапуск) |
+| Обновить после `git pull` | `docker compose up --build` |
+
+Образ включает оба метода прогноза. Для сборки нужен дополнительный диск под слои подготовки данных и обучения; их размер больше финального runtime-образа.
+
+### Без Docker · Python 3.12+
+
+Команды выполняются из корня репозитория; OpenAI API-ключ для расчёта и интерфейса не требуется.
+
+#### Windows · PowerShell
 
 ```powershell
 git clone https://github.com/BAITC-Hacks/hack-1404e13c-ai-dostar.git
@@ -73,7 +97,7 @@ python -m venv .venv
 Откройте **[localhost:8501](http://localhost:8501)** и нажмите **«Рассчитать»**. Статистический метод доступен сразу после сборки данных.
 
 <details>
-<summary><strong>Linux / macOS</strong></summary>
+<summary><strong>Linux / macOS без Docker</strong></summary>
 
 ```bash
 git clone https://github.com/BAITC-Hacks/hack-1404e13c-ai-dostar.git
@@ -89,6 +113,97 @@ python3 -m venv .venv
 </details>
 
 Исходные книги лежат в `datasets/IEK` и `datasets/Systeme electric`. Сборка создаёт восемь таблиц Parquet в `data/clean/`. Рабочий интерфейс использует реальные данные; при отсутствии таблиц показывает инструкцию по сборке. Для собственных распакованных архивов можно указать `--raw data/raw`.
+
+## Деплой в интернет
+
+### Streamlit Community Cloud — ссылка для демонстрации
+
+Понадобятся GitHub-аккаунт с доступом к этому репозиторию и [Streamlit Community Cloud](https://share.streamlit.io/). Публикуйте ветку `main`: исправления ассистента после релиза не входят в тег `v1.0.0`.
+
+**1. Подготовьте стартовый файл.** Облако устанавливает `requirements.txt`, но не выполняет команду сборки Excel автоматически. `data/clean/` и `data/models/` исключены из Git, поэтому одного запуска `app/ui/app.py` на чистом сервере недостаточно.
+
+Создайте **`streamlit_app.py` в корне репозитория** со следующим содержимым. Это пример для добавления перед деплоем; готового файла в текущей версии нет.
+
+```python
+import os
+import runpy
+import subprocess
+import sys
+from pathlib import Path
+
+import streamlit as st
+
+ROOT = Path(__file__).resolve().parent
+
+
+@st.cache_resource(show_spinner="Подготовка данных для демонстрации…")
+def prepare(build_ml: bool):
+    subprocess.run(
+        [sys.executable, "-m", "app.adapters.build", "--raw", "datasets"],
+        cwd=ROOT, check=True,
+    )
+    if build_ml:
+        subprocess.run(
+            [sys.executable, "-m", "app.ml.train"], cwd=ROOT, check=True,
+        )
+    return True
+
+
+prepare(os.environ.get("BUILD_ML", "0") == "1")
+runpy.run_path(str(ROOT / "app/ui/app.py"), run_name="__main__")
+```
+
+Подготовка кешируется между сессиями и повторными запусками страницы в одном процессе. После перезапуска сервера данные собираются заново. При обновлении Excel в `datasets/` перезагрузите приложение через **Reboot**, чтобы очистить кеш подготовки.
+
+Проверьте запуск локально и отправьте новый файл в ветку деплоя:
+
+```powershell
+.venv\Scripts\python.exe -m streamlit run streamlit_app.py
+# После проверки остановите сервер сочетанием Ctrl+C.
+git add streamlit_app.py
+git commit -m "deploy: add Streamlit Cloud entrypoint"
+git push origin main
+```
+
+**2. Создайте приложение.** В Community Cloud нажмите **Create app**, подключите GitHub и заполните:
+
+| Поле | Значение |
+|---|---|
+| Repository | `BAITC-Hacks/hack-1404e13c-ai-dostar` или ваш fork |
+| Branch | `main` |
+| Main file path | `streamlit_app.py` |
+| Advanced settings → Python version | `3.12` |
+| App URL | Свободное имя, например `ai-dostar-demo` |
+
+При необходимости предоставьте Streamlit доступ к репозиторию организации. После **Deploy** сервис выдаст HTTPS-ссылку вида `https://<выбранное-имя>.streamlit.app`. Подробности полей — в [официальной инструкции Streamlit](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy).
+
+**3. Настройте ИИ и ML.** Для первого запуска достаточно статистического метода без API-ключа. В **Advanced settings → Secrets** можно задать:
+
+```toml
+COPILOT_ENABLED = "0"
+BUILD_ML = "0"
+```
+
+Чтобы включить ИИ, замените настройки на следующие и подставьте свой ключ непосредственно в панели облака:
+
+```toml
+OPENAI_API_KEY = "ваш-ключ"
+OPENAI_MODEL = "gpt-4o-mini"
+COPILOT_ENABLED = "1"
+BUILD_ML = "0"
+```
+
+Параметры задаются **на верхнем уровне TOML, без секции `[openai]`**: приложение читает переменные окружения, а Streamlit экспортирует в них корневые значения Secrets. Не добавляйте ключ в стартовый файл или Git. См. [управление секретами Streamlit](https://docs.streamlit.io/develop/concepts/connections/secrets-management).
+
+Для ML установите `BUILD_ML = "1"` и перезагрузите приложение. Стартовый файл обучит модель в том же окружении и на тех же таблицах, где она будет использоваться. Обучение увеличивает время старта и потребление ресурсов; после перезапуска процесса оно повторяется. Если облако завершает процесс из-за нехватки памяти, верните `BUILD_ML = "0"` и используйте статистический метод либо сервер с большими ресурсами. При `BUILD_ML = "0"` выбирайте статистику: наличие актуальной ML-модели не гарантируется.
+
+**4. Проверьте опубликованную версию.** Откройте ссылку, нажмите **«Рассчитать»**, проверьте вкладки «Товар» и «Ассистент», затем утверждение и скачивание тестового заказа. Ошибки установки, чтения Excel и обучения смотрите в логах приложения. Изменения опубликованной ветки подхватываются облаком; после обновления данных делайте **Reboot**.
+
+### Данные и сохранение заказов на сервере
+
+Текущая версия рассчитана на совместное демо: авторизации и разделения заказов по пользователям нет, файл `data/state/approvals.json` общий для посетителей одного экземпляра приложения. Выбирайте доступ к приложению с учётом того, кому можно видеть выгрузки и менять утверждения.
+
+Не используйте локальный диск Community Cloud как единственное хранилище утверждений: сохраняйте экспортированные заказы отдельно. Для постоянной работы нужны контроль доступа и устойчивое хранилище состояния. На собственном сервере сохраняйте `data/state/` на постоянном диске и запускайте один экземпляр приложения, пока состояние хранится в JSON.
 
 ## Два метода прогноза
 

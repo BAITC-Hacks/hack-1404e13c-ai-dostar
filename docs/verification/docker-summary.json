@@ -1,0 +1,214 @@
+{
+  "date": "2026-09-23",
+  "branch": "ml/demand-forecast",
+  "merged_main": "877cd3461cb2ac195b03c60331bbb4f3e8a07a73",
+  "image_tag": "ai-dostar:ml-demand",
+  "image_id": "sha256:83628c214998818dc6691cc3ba8a80e59684d112b9878d1db4f80dffc0e78536",
+  "architecture": "amd64",
+  "size_bytes": 252418578,
+  "runtime": {
+    "python": "3.14.7",
+    "uid": 10001,
+    "model": {
+      "format_version": 1,
+      "sklearn_version": "1.9.1",
+      "trained_through": "2026-08",
+      "training_rows": 86094,
+      "training_products": 2523,
+      "model": "HistGradientBoostingRegressor(absolute_error)",
+      "max_lead_months": 3,
+      "created_at": "2026-09-23T12:53:27.003075+00:00",
+      "data_sha256": "63ccf9edd123a45f669263310a85c7879322f9445775afbf264d5498f6d48cb6",
+      "evaluation": {
+        "metric": "mean(abs(prediction - cleaned_sales) / max(prior_12_month_mean, 1))",
+        "selected_loss": "absolute_error",
+        "candidate_validation": [
+          {
+            "loss": "poisson",
+            "rows": 13667,
+            "baseline_scaled_mae": 0.9175027386037025,
+            "ml_scaled_mae": 0.9617050432409242,
+            "improvement_pct": -4.817675498657459
+          },
+          {
+            "loss": "absolute_error",
+            "rows": 13667,
+            "baseline_scaled_mae": 0.9175027386037025,
+            "ml_scaled_mae": 0.7575752551076269,
+            "improvement_pct": 17.43073636373669
+          }
+        ],
+        "selection_target_max": "2026-07",
+        "last_month_check": {
+          "month": "2026-08",
+          "rows": 2274,
+          "baseline_scaled_mae": 0.9783423201088204,
+          "ml_scaled_mae": 0.820313743537154,
+          "improvement_pct": 16.152687390042463
+        },
+        "overall": {
+          "rows": 20507,
+          "baseline_scaled_mae": 0.9389074990792862,
+          "ml_scaled_mae": 0.7848517778576886,
+          "improvement_pct": 16.40797643779266
+        },
+        "folds": [
+          {
+            "origin": "2026-03",
+            "train_target_max": "2026-03",
+            "train_rows": 51861,
+            "rows": 6824,
+            "baseline_scaled_mae": 0.8711059985856011,
+            "ml_scaled_mae": 0.7024728670411909,
+            "improvement_pct": 19.358508817321507
+          },
+          {
+            "origin": "2026-04",
+            "train_target_max": "2026-04",
+            "train_rows": 58657,
+            "rows": 6843,
+            "baseline_scaled_mae": 0.9637706552898816,
+            "ml_scaled_mae": 0.8125246480880973,
+            "improvement_pct": 15.69315338370545
+          },
+          {
+            "origin": "2026-05",
+            "train_target_max": "2026-05",
+            "train_rows": 65513,
+            "rows": 6840,
+            "baseline_scaled_mae": 0.9816763384681463,
+            "ml_scaled_mae": 0.8393529820134039,
+            "improvement_pct": 14.497991942724253
+          }
+        ],
+        "by_supplier_unit": [
+          {
+            "supplier": "IEK",
+            "unit": "м",
+            "rows": 904,
+            "baseline_scaled_mae": 1.3217400815409317,
+            "ml_scaled_mae": 1.0855026902071812,
+            "improvement_pct": 17.8732108251069,
+            "baseline_wape": 0.6071453965904119,
+            "ml_wape": 0.47761889531347346
+          },
+          {
+            "supplier": "IEK",
+            "unit": "упак",
+            "rows": 562,
+            "baseline_scaled_mae": 0.7470420552570801,
+            "ml_scaled_mae": 0.630693716278366,
+            "improvement_pct": 15.57453668905897,
+            "baseline_wape": 0.5458841941106856,
+            "ml_wape": 0.39701083567696904
+          },
+          {
+            "supplier": "IEK",
+            "unit": "шт",
+            "rows": 14386,
+            "baseline_scaled_mae": 0.947795954964547,
+            "ml_scaled_mae": 0.8024133218750454,
+            "improvement_pct": 15.33902232099521,
+            "baseline_wape": 0.3372309059664509,
+            "ml_wape": 0.35925808570158574
+          },
+          {
+            "supplier": "SE",
+            "unit": "шт",
+            "rows": 4655,
+            "baseline_scaled_mae": 0.8602562420475759,
+            "ml_scaled_mae": 0.6908040944226606,
+            "improvement_pct": 19.697869000239578,
+            "baseline_wape": 0.4004356280250055,
+            "ml_wape": 0.3100090437983873
+          }
+        ],
+        "by_lead": [
+          {
+            "lead": 1,
+            "rows": 6861,
+            "baseline_scaled_mae": 0.8984340405872054,
+            "ml_scaled_mae": 0.7257639290594285,
+            "improvement_pct": 19.219008155002882
+          },
+          {
+            "lead": 2,
+            "rows": 6841,
+            "baseline_scaled_mae": 0.9461663983180925,
+            "ml_scaled_mae": 0.7930390813030784,
+            "improvement_pct": 16.1839732722715
+          },
+          {
+            "lead": 3,
+            "rows": 6805,
+            "baseline_scaled_mae": 0.9724167230354206,
+            "ml_scaled_mae": 0.8361952587886146,
+            "improvement_pct": 14.008548086419959
+          }
+        ],
+        "target": "Sales minus one-off excess; only months with positive opening stock. Unobserved lost demand is not ground truth.",
+        "limitations": "Overlapping test horizons; short history; positive opening stock does not prove availability throughout the month. Undated external seasonality coefficients excluded."
+      },
+      "model_id": "ba74ee4fbb7d"
+    },
+    "rows": {
+      "sales_lines": 248875,
+      "monthly_sales": 99561,
+      "stock_monthly": 117282,
+      "stock_now": 3577,
+      "in_transit": 313,
+      "products": 3667,
+      "seasonality": 24,
+      "manager_baseline": 497
+    },
+    "app_sha256": {
+      "app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "app/adapters/__init__.py": "0cca80598ae7e333884f03cc37c6d460f5a13846e297bbdc525a59ecd93f2e8d",
+      "app/adapters/build.py": "598a8993121c05f5b97992ba3ec8be25577bfcfb9512c4267c21a5959840e94a",
+      "app/adapters/common.py": "4136e8e63cb66d27974c53d5810333fee2dc56c00c36aecb25ea9152adbc3389",
+      "app/adapters/iek.py": "8fa36a8ac4ec9026cf739d49c31cee2475027524eb509add8db71431e02f0ac4",
+      "app/adapters/se.py": "21509ea082175d6cdddc09b3562769f6209a77a5568fdb5e96b9b43941be2aa3",
+      "app/assistant.py": "8fc3fb85895d89d0b37cda3267ab9b7fd5449de0c4b9ddeff99ebf3f10ffb041",
+      "app/copilot.py": "39787c7a7254c441dad21439518d530326f9d10688f5311ada169558fcf26af5",
+      "app/engine/__init__.py": "bc7cc4bd5cb98756c1ec667410f78263b021d38a2ab0b2bb0ac1968780ac7b5a",
+      "app/engine/demand.py": "42d8634ff16baf7ffbb421791eb31a08e35b71e2c44976a330bc64b7db340122",
+      "app/engine/explain.py": "e7bae610baa1ce97c2f4ccddffc005673b57059e1979744f086f75bd57b21800",
+      "app/engine/forecast.py": "ee12b49e94cd343311c0d1377409595ec674f923d83bde8755a52b6f802db764",
+      "app/engine/lifecycle.py": "b84c07d3a84ba8ed56633090728afc176842bdaced00f3e51df83a4e80b0b9c4",
+      "app/engine/oneoffs.py": "a3c20a500500ba270e111335dddf3f1596b681c36105625663ac782584a32fc2",
+      "app/engine/replenish.py": "839e1b035581877ac781d9daf18f710995ddb469d9775dc8071e740102202f99",
+      "app/export.py": "8018b9e3dc662ad002def02f0c73d3a73b389a71ff2012c5f8309664e30aa592",
+      "app/ml/__init__.py": "38163164a464bf6837bb13d65fe90cfc47cfafa9f0a49ab0cb79d2ba60f28b77",
+      "app/ml/model.py": "67383ea322a0c082fb14b4a311022a9cb152c5f2ab1e9d3143cf68df609239d2",
+      "app/ml/train.py": "ca2a873764f112dd0d8c18c4159105b8894723e0679a19349d081efdd797b76e",
+      "app/mock.py": "6bb74e3fbf193e922f01eca5e572b71e13b34ed29507b9905050a13a10cec786",
+      "app/pipeline.py": "795c50d415e834909de394e6384b4785306589de5442e6358d93ec9be2db9d85",
+      "app/schema.py": "f713c9b2ece9d824b6b0969cbc371d3400c73db8b1c7f554965cdf92d8284b8f",
+      "app/ui/app.py": "e06d3627613f1d50b4d3bd802d862c4fadd788ce3124b848deea2c3bdfae6820",
+      "app/ui/state.py": "5eb1a47e290547c7f8f5d3abb860e407f9944527705bd67c801f93fe4b6edd93",
+      "app/ui/tab_assistant.py": "95776a88fb60279735956ae0c9cbaeb043df67cb5f7d779cb6dacd393c9d1aea"
+    }
+  },
+  "pip_check": "No broken requirements found.",
+  "source_matches_worktree": true,
+  "external_openai_api_tested": false,
+  "verification": {
+    "windows_full_after_5c5b3cc": {
+      "passed": 124,
+      "seconds": 287.78
+    },
+    "linux_full_before_layout_change": {
+      "passed": 124,
+      "seconds": 196.05
+    },
+    "windows_assistant_and_real_ui_after_layout_change": {
+      "passed": 21,
+      "seconds": 74.3
+    },
+    "browser_final_image": {
+      "statistical": "passed",
+      "ml": "passed"
+    },
+    "volume_survives_recreation": true
+  }
+}
