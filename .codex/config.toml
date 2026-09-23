@@ -1,0 +1,6 @@
+[marketplaces.mem0-plugins]
+source_type = "git"
+source = "https://github.com/mem0ai/mem0.git"
+
+[plugins."mem0@mem0-plugins"]
+enabled = true

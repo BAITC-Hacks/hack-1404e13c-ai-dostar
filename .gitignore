@@ -1,0 +1,5 @@
+# Local credentials must stay outside the shared repository.
+.env
+.env.*
+!.env.example
+.mem0/
