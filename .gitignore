@@ -3,3 +3,10 @@
 .env.*
 !.env.example
 .mem0/
+
+data/raw/
+data/clean/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
