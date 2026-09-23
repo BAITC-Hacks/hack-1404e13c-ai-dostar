@@ -1,0 +1,92 @@
+{
+  "created_at_utc": "2026-09-23T12:10:18.869029+00:00",
+  "python_version": "3.14.0",
+  "sklearn_version": "1.9.1",
+  "cpu": "Intel64 Family 6 Model 186 Stepping 3, GenuineIntel",
+  "logical_cpus": 12,
+  "threadpools": [
+    {
+      "internal_api": "openblas",
+      "version": "0.3.34.106.0",
+      "architecture": "Haswell"
+    },
+    {
+      "internal_api": "openmp",
+      "version": null,
+      "architecture": null
+    },
+    {
+      "internal_api": "openblas",
+      "version": "0.3.31.dev",
+      "architecture": "Haswell"
+    }
+  ],
+  "data_sha256": "63ccf9edd123a45f669263310a85c7879322f9445775afbf264d5498f6d48cb6",
+  "production_artifact_sha256": "0c925b997bcbd28d94c98e5934301ecd925c6d4a304569a7dbdc2cffa0a7808a",
+  "source_tables": {
+    "sales_lines": 248875,
+    "monthly_sales": 99561,
+    "stock_monthly": 117282,
+    "stock_now": 3577,
+    "in_transit": 313,
+    "products": 3667,
+    "seasonality": 24,
+    "manager_baseline": 497
+  },
+  "features": [
+    "supplier",
+    "category",
+    "unit",
+    "log_scale",
+    "lag_1",
+    "lag_2",
+    "lag_3",
+    "lag_6",
+    "lag_12",
+    "mean_3",
+    "mean_6",
+    "nonzero_12",
+    "cv_12",
+    "baseline_ratio",
+    "seasonal_index",
+    "trend_factor",
+    "month_sin",
+    "month_cos",
+    "lead"
+  ],
+  "preparation_seconds": 33.54634400000032,
+  "fold": {
+    "origin": "2026-05",
+    "train_target_max": "2026-05",
+    "test_target_min": "2026-06",
+    "test_target_max": "2026-08",
+    "fit": {
+      "wall_seconds": 0.9195748000001913,
+      "process_cpu_seconds": 3.265625,
+      "rss_after_mb": 391.8515625,
+      "rows": 65513,
+      "thread_limit": 4
+    },
+    "metrics": {
+      "rows": 6840,
+      "baseline_scaled_mae": 0.9816763384681463,
+      "ml_scaled_mae": 0.8393529820134039,
+      "improvement_pct": 14.497991942724253
+    }
+  },
+  "full_fit": {
+    "wall_seconds": 1.0740504000004876,
+    "process_cpu_seconds": 3.859375,
+    "rss_after_mb": 410.2890625,
+    "rows": 86094,
+    "thread_limit": 4
+  },
+  "full_training_target_max": "2026-08",
+  "production_trees": 150,
+  "production_nodes": 4350,
+  "production_leaves": 2250,
+  "replication_examples": 1000,
+  "permutation_repeats": 3,
+  "permutation_rows": 6840,
+  "caveat": "Historical backtest already inspected during development; not an untouched external test."
+}

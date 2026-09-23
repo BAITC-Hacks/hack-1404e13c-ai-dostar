@@ -25,6 +25,8 @@ python -m venv .venv
 
 ## Обучаемый ML-прогноз
 
+**Наглядный разбор:** [как модель учится на CPU, графики, узлы деревьев и Gym](docs/ml-visual-guide.md) · [Jupyter notebook](notebooks/01_demand_model_walkthrough.ipynb) · [готовая HTML-страница](notebooks/01_demand_model_walkthrough.html).
+
 Помимо статистического метода, подключен обучаемый градиентный бустинг по деревьям. Обучение на реальных Excel:
 
 ```powershell
