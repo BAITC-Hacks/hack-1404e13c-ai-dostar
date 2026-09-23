@@ -113,6 +113,43 @@ INPUT_TABLES = {
     "manager_baseline": MANAGER_BASELINE,
 }
 
+# ---------------------------------------------------------------- engine intermediates
+
+# sales_lines + one-off decision per invoice line (engine/oneoffs.py).
+SALES_FLAGGED = {
+    **SALES_LINES,
+    "is_oneoff": "bool",
+    "oneoff_excess_qty": "float64",  # part of qty removed from regular demand
+    "oneoff_reason": "string",
+}
+
+# Regular monthly demand per SKU (engine/demand.py). Full month grid from 2025-01
+# to the as_of month for every SKU with sales; months without sales are 0.
+DEMAND_MONTHLY = {
+    "supplier": "string",
+    "sku": "string",
+    "month": "string",  # YYYY-MM
+    "qty_raw": "float64",  # net sales from invoices
+    "oneoff_excluded_qty": "float64",
+    "stockout": "bool",  # start-of-month stock <= 0
+    "stockout_uplift_qty": "float64",  # estimated lost demand
+    "qty_regular": "float64",  # qty_raw - oneoff_excluded_qty + stockout_uplift_qty, >= 0
+    "days_in_month_observed": "int64",  # < days in month only for the current month
+}
+
+# Demand forecast for the replenishment horizon (engine/forecast.py).
+FORECAST = {
+    "supplier": "string",
+    "sku": "string",
+    "avg_daily_regular": "float64",
+    "sigma_daily": "float64",
+    "seasonal_index": "float64",
+    "trend_factor": "float64",
+    "growth_factor": "float64",
+    "horizon_days": "int64",
+    "forecast_H": "float64",
+}
+
 # ---------------------------------------------------------------- output
 
 ORDER_LINES = {
@@ -161,6 +198,16 @@ class Params:
     use_seasonality: bool = True
     use_trend: bool = True
     use_in_transit: bool = True
+
+
+@dataclass
+class PipelineResult:
+    order_lines: pd.DataFrame  # ORDER_LINES
+    forecast: pd.DataFrame  # FORECAST
+    demand_monthly: pd.DataFrame  # DEMAND_MONTHLY
+    sales_flagged: pd.DataFrame  # SALES_FLAGGED
+    params: Params
+    as_of: pd.Timestamp
 
 
 def empty(table: dict[str, str]) -> pd.DataFrame:

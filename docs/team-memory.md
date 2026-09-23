@@ -29,7 +29,9 @@ This file is committed with the project and read by coding agents at the start o
 - Setup: `python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt` (pandas 3.x works).
 - Data: unzip partner archives into `data/raw/` (`unzip -O cp866 IEK.zip -d data/raw`), then `.venv/bin/python -m app.adapters.build` → `data/clean/*.parquet` (~8 s).
 - In code: `from app.adapters import load_clean; data = load_clean()` → dict of contract tables from `app/schema.py`.
-- Tests: `.venv/bin/python -m pytest -q` (adapter smoke tests skip if data/clean is missing).
+- Tests: `.venv/bin/python -m pytest -q` (tests skip if data/clean is missing). After task 2.0: 11 passed, 3 xfailed (xfail = must-have waiting for its engine step; remove the xfail mark when it passes).
+- Pipeline: `from app.pipeline import run; r = run()` → `PipelineResult(order_lines, forecast, demand_monthly, sales_flagged, params, as_of)`; ~3 s on real data.
+- UI: `.venv/bin/streamlit run app/ui/app.py` (sidebar toggle «Мок-данные» switches mock ↔ real pipeline).
 
 ## Open questions
 
@@ -43,7 +45,10 @@ This file is committed with the project and read by coding agents at the start o
 
 ## Расчет
 
-(Person 2 notes)
+- 2026-09-23: Task 2.0 skeleton pushed. Engine files exist with working stubs: `flag_oneoffs` flags nothing, `build_monthly` builds the month grid 2025-01..as_of with stockout flag but uplift = 0, `forecast` = 12-month average with seasonal_index = trend = 1, `replenish.calc` implements the full formula (horizon transit, z·σ·√LT safety, pack rounding, urgency, needs_review when stock is missing), `explain` builds a template rationale.
+- `as_of` defaults to the last sale date (2026-09-22). Every engine function takes `(…, params, as_of)`.
+- Known issue for 2.1/2.2: with σ from monthly std, safety stock is often larger than forecast_H for volatile SKUs (e.g. IEK pipes) — revisit σ once one-offs and seasonality are in.
+- Stub result: 2460 SKUs with demand, 1040 with recommended_qty > 0.
 
 ## Продукт
 
