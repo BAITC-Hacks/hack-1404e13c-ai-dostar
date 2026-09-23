@@ -20,7 +20,8 @@ def run(data: dict[str, pd.DataFrame] | None = None, params: schema.Params | Non
     as_of = params.as_of or data["sales_lines"]["date"].max().normalize()
 
     sales_flagged = oneoffs.flag_oneoffs(data["sales_lines"], params)
-    demand_monthly = demand.build_monthly(sales_flagged, data["stock_monthly"], params, as_of)
+    demand_monthly = demand.build_monthly(sales_flagged, data["stock_monthly"], params, as_of,
+                                         seasonality=data["seasonality"])
     fc = forecast.forecast(demand_monthly, data["monthly_sales"], data["seasonality"],
                            data["products"], params, as_of)
     order_lines = replenish.calc(fc, demand_monthly, data["stock_now"], data["in_transit"],

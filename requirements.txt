@@ -5,3 +5,4 @@ python-calamine
 pyarrow
 streamlit
 pytest
+openai

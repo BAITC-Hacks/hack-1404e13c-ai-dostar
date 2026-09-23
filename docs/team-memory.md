@@ -10,7 +10,7 @@ This file is committed with the project and read by coding agents at the start o
 
 ## Progress (обновлять при каждом push)
 
-Статус на 2026-09-23, код проверен по `660a167`: готовы 2.0, 2.1 (Человек 2), реализованы и отправлены в `main` модули и материалы 1.1–1.5 (Человек 1). Для полного подключения 1.2 человек 2 должен передать таблицу сезонности в `build_monthly`; сейчас в общем pipeline коррекция дефицита работает с коэффициентом 1. Подробная передача результатов — в разделе «Спрос» ниже; владельцы файлов — `docs/tasks.md`.
+Статус на 2026-09-23: готовы 2.0, 2.1, 2.4, copilot (Человек 2) и 1.1–1.5 (Человек 1). Весь расчет закрыт и проверен тестами, осталось UI. Сезонность передана в `build_monthly`, устаревший `xfail` снят. Подробная передача результатов спроса — раздел «Спрос» ниже; владельцы файлов — `docs/tasks.md`.
 
 **Сделано (в `main`):**
 
@@ -23,34 +23,45 @@ This file is committed with the project and read by coding agents at the start o
 | Разделение на 3 человека, владение файлами, таймлайн, правила git, шаблон промпта | `docs/tasks.md` | `d2b98bc` |
 | **Задача 2.0**: каркас движка, `pipeline.run()` работает на реальных данных (~3 с) | `app/engine/`, `app/pipeline.py` | `960393f` |
 | Заготовки для Продукта: Streamlit (мок ↔ реальный расчет), мок, экспорт, copilot | `app/ui/app.py`, `app/mock.py`, `app/export.py`, `app/copilot.py` | `960393f` |
-| Каркас приемочных тестов; актуальные результаты и оставшаяся метка `xfail` указаны ниже | `tests/test_acceptance.py`, `tests/test_demand.py` | `960393f` |
+| Первые тесты приемки | `tests/test_acceptance.py`, `tests/test_demand.py` | `960393f` |
 | **Задача 2.1**: прогноз с сезонностью (SKU → группа → компания), устойчивый тренд, робастная σ; методика | `app/engine/forecast.py`, `docs/methodology-forecast.md` | `dcc294b` |
 | **Задача 1.1** (Человек 1): поиск разовых строк накладных | `app/engine/oneoffs.py` | `ef7cd5d` |
 | **Задача 1.2**: оценка упущенного спроса по месяцам, сезонные коэффициенты через необязательный аргумент | `app/engine/demand.py` | `5365e55` |
 | **Задача 1.3**: синтетические и реальные проверки спроса, исправление границы дня `as_of` | `tests/test_demand.py`, `app/engine/oneoffs.py` | `099d736` |
 | **Задача 1.4**: типичный объём и единица измерения в отчёте о разовых продажах | `app/engine/oneoffs.py`, `tests/test_demand.py` | `d531b8a` |
 | **Задача 1.5**: методика с формулами, порогами и ограничениями | `docs/methodology-demand.md` | `660a167` |
+| **Copilot** (ChatGPT): объяснение строки и сводка по поставщику с защитой от выдуманных чисел | `app/copilot.py`, `tests/test_copilot.py`, `.env.example` | «calc: copilot…» |
+| **Задача 2.4**: приемка must-have №1 по каждому источнику (в пути, поздний приход, остаток, продажи, рост категории, кратность, отчет 2024, сезонность компании, история остатков) и №4 (вколотая строка ×50) | `tests/test_acceptance.py` | «calc: copilot…» |
 | Конвертер xlsx → csv (Windows-пути `C:/Hackathon/datasets`) — вспомогательный, pipeline читает xlsx через адаптеры | `scripts/excel_to_csv.py` | `d3c84ef` |
 
-**Последний полный прогон:** 34 passed, 1 xpassed на реальных parquet-данных (Windows, Python 3.13). В `tests/test_demand.py` теперь 21 проверка, все проходят. `test_3_stockout_fix_raises_demand` тоже проходит, но пока имеет `xfail(strict=False)`, поэтому отображается как XPASS. Человеку 2 нужно снять устаревшую метку; это не провал теста. После подключения сезонности в pipeline нужно повторить полный прогон.
+**Тесты сейчас:** 49 passed, 0 xfail (~55 с). Расчетные must-have №1–№4 закрыты и проверены тестами. №5 (группировка по поставщику, утверждение, экспорт) закрывается интерфейсом 3.2–3.3.
 
-**Что в каркасе заглушка, а что уже настоящее:**
+**Состояние модулей:**
 
-| Модуль | Настоящее | Заглушка → кто делает |
+| Модуль | Что работает | Что осталось → кто |
 |---|---|---|
 | `engine/oneoffs.py` | **готово (1.1, 1.4)**: median/MAD, доля месяца, повторение по месяцам, fallback по категории, отчёт с типичным объёмом | — |
-| `engine/demand.py` | **реализовано (1.2)**: регулярный ряд, оценка дефицита, сезонные коэффициенты, неполный месяц, переключатель коррекции | передать `seasonality=data["seasonality"]` из pipeline → Человек 2 |
+| `engine/demand.py` | **готово (1.2)**: сетка месяцев, вычет разовых, stockout (остаток 0 и продажи ниже ожидаемых, ≥2 месяцев с остатком), uplift с сезонностью компании | — |
 | `engine/forecast.py` | **готово (2.1)**: сезонность с усадкой, тренд, рост, робастная σ | — |
 | `engine/replenish.py` | вся формула: в пути в горизонте, z·σ·√LT, кратность, срочность, `needs_review` | мелкие доработки → Человек 2, задача 2.2 |
-| `engine/explain.py` | шаблонное обоснование из чисел | формулировки → Человек 2, задача 2.3 |
-| `app/ui/app.py` | таблица по поставщикам, переключатель мок/реальные | вкладки, редактирование, утверждение → Человек 3, 3.1–3.7 |
+| `engine/explain.py` | шаблонное обоснование из чисел | добавить причину разового заказа → Человек 2, задача 2.3 |
+| `app/copilot.py` | **готово**: `explain_line`, `supplier_summary`, fallback на шаблон | кнопки в UI → Человек 3 |
+| `app/ui/app.py` | только таблица по поставщикам, переключатель мок/реальные | **всё остальное** → Человек 3, 3.1–3.7 (критический путь) |
 | `app/export.py` | `to_table`, `to_xlsx`, защита от формул | кнопки в UI → Человек 3, 3.3 |
+
+**Для демо (проверено на реальных данных):**
+
+- Разовый заказ: IEK `130200305_` «Петля металлическая LOOP», 210 000 шт одной накладной 09.06.2025 — исключена. Регулярный крупный опт SE `030200192_` «Установочная коробка» 36–90 тыс. — не исключен.
+- Сезонность: IEK `130300792_` «Труба гибкая Ø50» — индекс 0.41 (февраль), 1.05 (июнь), 2.04 (горизонт сен–окт), тренд ×1.17, +3 373 м восстановлено за месяц дефицита → заказ 16 400 м.
+- Итог по поставщикам: IEK — к заказу 668 из 1948 позиций; SE — 169 из 534. У IEK много «критичных» из-за оценки остатка (см. Known issue в «Расчет»).
+- Сравнение с менеджером: `manager_baseline` (SE, 497 позиций) — вкладка 3.6.
+- Все must-have можно показать переключателями `Params(use_oneoff_filter / use_stockout_fix / use_seasonality / use_trend / use_in_transit)` — вкладка 3.5.
 
 **Следующие шаги:**
 
-- Человек 1 — реализация 1.1–1.5 и отдельные коммиты уже в `main`; при интеграционных вопросах использовать описание и тесты из раздела «Спрос».
-- Человек 2 — подключить таблицу сезонности к коррекции дефицита и снять прошедший `xfail` (точный вызов ниже); далее 2.2, 2.3 и оставшиеся приемочные проверки 2.4.
-- Человек 3 — подключать `PipelineResult.demand_monthly`, `sales_flagged` и `oneoffs.report()`; примеры и названия полей ниже. Продолжить интерфейс, утверждение и экспорт по своим задачам.
+- Человек 1 — задачи 1.1–1.5 готовы; при интеграционных вопросах — описание и тесты в разделе «Спрос». Свободен помогать с UI (вкладки «Товар», «Разовые заказы») по договоренности с Человеком 3.
+- Человек 2 — решить Known issue с остатком IEK (2.2), 2.3 обоснование (причина разового заказа), помочь UI с вкладкой 3.5 «Проверки» по договоренности.
+- Человек 3 — **критический путь**: 3.1–3.3 сразу на `pipeline.run()`, затем 3.5 «Проверки». Подключать `PipelineResult.demand_monthly`, `sales_flagged` и `oneoffs.report()` (поля — в разделе «Спрос»). Кнопки copilot: `copilot.explain_line(row)` в карточке товара и `copilot.supplier_summary(order_lines, supplier)` над кнопкой «Утвердить» (пример в docstring `app/copilot.py`).
 
 ## Decisions
 
@@ -82,6 +93,7 @@ This file is committed with the project and read by coding agents at the start o
 
 - How the manager's «Кэф. Роста», «Кэф. Сез-ти» and «Запас» are computed in the SE file (not reverse-engineered yet).
 - What the monthly sales report includes/excludes compared to invoices (ask partner).
+- 2026-09-23: Commit `03b9ce7` (ValiCoder) added the raw partner xlsx and CSV copies under `datasets/` (~15 MB). This contradicts the decision to keep partner data out of Git (`data/raw/` is gitignored). The repo is private. Team to decide: keep or `git rm -r --cached datasets/` + add to `.gitignore` (history still keeps the files).
 - Real lead times per supplier (IEK transit headers suggest 12–40 days).
 
 ## Спрос
@@ -159,6 +171,12 @@ monthly = result.demand_monthly
 - Seasonal demo SKU: IEK `130300792_` «Труба гибкая Ø50» — seasonal index 0.41 (Feb), 1.05 (Jun), 2.03 (Sep–Oct horizon). Also `130300791_` Ø40.
 - Safety-stock issue resolved by robust σ: pipes safety 2 764 vs forecast 11 976 (was larger than forecast). Result now: 842 SKUs with recommended_qty > 0; ~38% SKUs have trend ≠ 1.
 - `avg_daily_regular` is the deseasonalised base; the rationale shows seasonality/trend as separate factors.
+- 2026-09-23: Task 2.4 done. Pitfall: `df.flags` is a built-in pandas attribute — always use `df["flags"]` for the ORDER_LINES column.
+- One-off acceptance compares regular need (`forecast_H + safety_stock`), not `recommended_qty`: the order is need minus stock, so small need changes look large in % of the order. Injected 50× line on IEK `200400166_`: need +6% with filter, +46% without.
+- 2026-09-23: `pipeline.run` now passes `seasonality=` to `demand.build_monthly`, so stockout uplift is seasonal. Stock-history acceptance zeroes stock only in weak months (demand.py needs ≥2 stocked months as evidence).
+- 2026-09-23: AI resources: OpenAI API ($50) → `app/copilot.py` (row explanation + supplier summary, chat.completions, store=False, timeout 20 s, cached). Model gets only the rounded fact pack; any number in the answer that is not in the facts (except small counts ≤12), an API error or a missing key → template text. Key in `.env` (`OPENAI_API_KEY`, optional `OPENAI_MODEL`), see `.env.example`. NVIDIA Brev ($50) = GPU VMs, not an LLM API: use only to host the demo if a public URL is needed; not needed for the calculation.
+- **Known issue for 2.2 (important for demo):** IEK current stock is estimated as Sep-1 stock − Sep sales (receipts unknown), so many IEK SKUs show free_qty 0 → 401 of 668 IEK order lines are «critical». Options: mark IEK stock as estimate in the UI/rationale, or use max(estimate, Sep-1 stock × share of month left). Decide before the demo.
+- Note for Person 1: `oneoffs.flag_oneoffs` counts the candidate's own month among «comparable months», so effectively only 2 other months with ≥50% volume make a line regular. Example: IEK `010300004_` (median 2, lines 60/73/48) — a new 100-unit line is kept as regular. Decide whether that is intended.
 
 ## Продукт
 
