@@ -197,7 +197,7 @@ import streamlit as st
 from types import SimpleNamespace
 from app import assistant
 from app.mock import mock_order_lines
-from app.ui.tab_assistant import render
+from app.ui.tab_assistant import render_ask_panel
 if "order_lines" not in st.session_state:
     st.session_state.order_lines = mock_order_lines(3)
     st.session_state.calculation_id = 1
@@ -205,7 +205,7 @@ if st.session_state.get("seed", True):
     st.session_state.seed = False
     st.session_state.assistant_answer = assistant.ChatAnswer("OLD ANSWER", "rules", "list_items", dict(assistant.DEFAULT_FILTER), st.session_state.order_lines.copy())
     st.session_state.assistant_answer_key = (st.session_state.calculation_id, st.session_state.order_lines.to_json())
-render(SimpleNamespace(lifecycle=None))
+render_ask_panel(SimpleNamespace(lifecycle=None))
 ''').run()
     assert not at.exception
     assert any(m.value == "OLD ANSWER" for m in at.markdown)
@@ -220,3 +220,17 @@ render(SimpleNamespace(lifecycle=None))
     at.session_state.calculation_id = 2
     at.run()
     assert not at.exception and not any(m.value == "OLD ANSWER" for m in at.markdown)
+
+
+def test_ask_question_cannot_authorize_invented_quantity(llm, lines):
+    llm(_plan_then("Заказать 987654 шт."))
+    answer = assistant.ask("Заказать 987654 УЗО у IEK?", lines)
+    assert "987654" not in answer.text  # the answer is rendered from calculated facts
+
+
+def test_ask_client_configuration_error_uses_rules(monkeypatch, lines):
+    monkeypatch.setattr(copilot, "enabled", lambda: True)
+    monkeypatch.setattr(copilot, "model_name", lambda: (_ for _ in ()).throw(ValueError("bad model")))
+    answer = assistant.ask("критичные узо iek", lines)
+    assert answer.source.startswith("rules (ошибка LLM: ValueError)")
+    assert len(answer.rows) == 1

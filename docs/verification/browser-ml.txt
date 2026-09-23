@@ -1,0 +1,1 @@
+Browser smoke passed; screenshots: .pytest_cache\system-latest-browser\ml

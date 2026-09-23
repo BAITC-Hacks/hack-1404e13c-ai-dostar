@@ -1,0 +1,44 @@
+Rebuilding actual supplier Excel...
+IEK: parsed in 4s
+skip IEK_CSV: no adapter
+Systeme electric: parsed in 2s
+skip Systeme electric_CSV: no adapter
+All 8 rebuilt tables match runtime values and dtypes.
+MOQ  ИЭК.xlsx [Лист7] -> MOQ  ИЭК.csv
+Динамика продаж_2025-2026.xlsx [Лист_1] -> Динамика продаж_2025-2026.csv
+Ежемесячные остатки продукции за последние 2 года  ИЭК.xlsx [Лист_1] -> Ежемесячные остатки продукции за последние 2 года  ИЭК.csv
+Ежемесячные продажи в количественном выражении за последние 2 года.xlsx [Лист_1] -> Ежемесячные продажи в количественном выражении за последние 2 года.csv
+Путь ИЭК 22.09.2026.xlsx [Лист4] -> Путь ИЭК 22.09.2026.csv
+Сезонность ИЭК.xlsx [Сезонность] -> Сезонность ИЭК.csv
+MOQ SystemElectric.xlsx [Лист_1] -> MOQ SystemElectric.csv
+Динамика продаж_Syseme Electric_2025-2026.xlsx [Лист_1] -> Динамика продаж_Syseme Electric_2025-2026.csv
+Ежемесячные остатки SystemElectric 2024-2026.xlsx [Лист_1] -> Ежемесячные остатки SystemElectric 2024-2026.csv
+Ежемесячные продажи в кол-м выражении SystemElectric 2024-2026.xlsx [Лист_1] -> Ежемесячные продажи в кол-м выражении SystemElectric 2024-2026__Лист_1.csv
+Ежемесячные продажи в кол-м выражении SystemElectric 2024-2026.xlsx [Лист1] -> Ежемесячные продажи в кол-м выражении SystemElectric 2024-2026__Лист1.csv
+Сезонность SystemElectric 2024-2026.xlsx [Лист1] -> Сезонность SystemElectric 2024-2026.csv
+Товар в пути_SystemElectric на 22.09.2026.xlsx [TDSheet] -> Товар в пути_SystemElectric на 22.09.2026__TDSheet.csv
+Товар в пути_SystemElectric на 22.09.2026.xlsx [Лист1] -> Товар в пути_SystemElectric на 22.09.2026__Лист1.csv
+Training and evaluating a new model in isolated storage...
+Causal history through 2025-06
+Causal history through 2025-07
+Causal history through 2025-08
+Causal history through 2025-09
+Causal history through 2025-10
+Causal history through 2025-11
+Causal history through 2025-12
+Causal history through 2026-01
+Causal history through 2026-02
+Causal history through 2026-03
+Causal history through 2026-04
+Causal history through 2026-05
+Causal history through 2026-06
+Causal history through 2026-07
+Causal history through 2026-08
+Model selection (before final fold): {'loss': 'poisson', 'rows': 13667, 'baseline_scaled_mae': 0.9175027386037025, 'ml_scaled_mae': 0.9617050432409242, 'improvement_pct': -4.817675498657459}
+Model selection (before final fold): {'loss': 'absolute_error', 'rows': 13667, 'baseline_scaled_mae': 0.9175027386037025, 'ml_scaled_mae': 0.7575752551076269, 'improvement_pct': 17.43073636373669}
+Validation origin 2026-03: {'origin': '2026-03', 'train_target_max': '2026-03', 'train_rows': 51861, 'rows': 6824, 'baseline_scaled_mae': 0.8711059985856011, 'ml_scaled_mae': 0.7024728670411909, 'improvement_pct': 19.358508817321507}
+Validation origin 2026-04: {'origin': '2026-04', 'train_target_max': '2026-04', 'train_rows': 58657, 'rows': 6843, 'baseline_scaled_mae': 0.9637706552898816, 'ml_scaled_mae': 0.8125246480880973, 'improvement_pct': 15.69315338370545}
+Validation origin 2026-05: {'origin': '2026-05', 'train_target_max': '2026-05', 'train_rows': 65513, 'rows': 6840, 'baseline_scaled_mae': 0.9816763384681463, 'ml_scaled_mae': 0.8393529820134039, 'improvement_pct': 14.497991942724253}
+Verifying statistical pipeline, approvals and both export formats...
+Verifying ml pipeline, approvals and both export formats...
+PASS: local real-data verification. Report: C:\Hackathon\hack-1404e13c-ai-dostar\docs\verification\real-system.json

@@ -12,3 +12,4 @@ __pycache__/
 .pytest_cache/
 data/state/
 data/models/
+.ipynb_checkpoints/

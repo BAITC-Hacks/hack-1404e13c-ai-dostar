@@ -14,6 +14,7 @@
 
 ## ИИ (ChatGPT API), если задан `OPENAI_API_KEY`
 
+- **Панель «Спросить ассистента»** стоит над вкладками (резервируется вверху страницы, заполняется после вкладок, чтобы проверка устаревшего ответа видела правки этого прохода).
 - **Grounded assistant answers:** the LLM selects intent and a JSON filter only. The application renders counts, explanations, recommendations and summaries directly from calculated data; no free-form model answer or numeric allowlist is used. Counts are computed before display limits. Supplier filters scope recommendations and lifecycle statistics. Cached answers are invalidated when order rows or calculation ID change.
 - **Вердикт ИИ по паре не отменяет параметры.** И `gpt-4o-mini`, и `gpt-4.1-mini` на реальных парах ошибочно называли «заменой» товары с разными параметрами (колодка на 3 вывода против 2 уровней, рамка на 4 места против 1). Поэтому «замена» от ИИ принимается, только если числовые параметры названий совпадают; иначе остается «вариант исполнения» с пометкой.
 

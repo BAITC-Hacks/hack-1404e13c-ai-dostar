@@ -79,8 +79,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "datasets_dir", type=Path, nargs="?",
-        default=Path(__file__).resolve().parents[2] / "datasets",
-        help="Directory containing IEK and Systeme electric (default: C:/Hackathon/datasets)",
+        default=Path(__file__).resolve().parents[1] / "datasets",
+        help="Directory containing IEK and Systeme electric (default: repository datasets/)",
     )
     args = parser.parse_args()
     for name in SOURCES:

@@ -99,3 +99,47 @@ def test_real_ui_order_explanation_checks_approval_exports_restart(tmp_path, mon
     assert len(comparison) == 497
     assert comparison["Наш факт / месяц"].notna().any()
     assert comparison["Заказ менеджера"].isna().any()
+
+
+def test_real_assistant_invalidates_answer_after_edit_and_recalculation(tmp_path, monkeypatch):
+    """A free-form answer must never show quantities from an older order."""
+    from app import assistant
+
+    monkeypatch.setattr(state, "STATE_FILE", tmp_path / "approvals.json")
+    monkeypatch.setattr(copilot, "enabled", lambda: False)
+    calls = []
+    real_ask = assistant.ask
+
+    def tracked_ask(query, lines, signals):
+        calls.append(query)
+        return real_ask(query, lines, signals)
+
+    monkeypatch.setattr(assistant, "ask", tracked_ask)
+    at = AppTest.from_file(APP, default_timeout=90).run()
+    button(at, "Рассчитать").click().run()
+    at.text_area[0].input("IEK заказ").run()
+    button(at, "Спросить").click().run()
+    healthy(at)
+    found = at.session_state.assistant_answer
+    assert found.source == "rules" and not found.rows.empty
+    assert found.rows.supplier.eq("IEK").all() and found.rows.final_qty.gt(0).all()
+    sku = found.rows.iloc[0].sku
+    shown = at.session_state.order_lines.query("supplier == 'IEK'").reset_index(drop=True)
+    row_number = int(shown.index[shown.sku.eq(sku)][0])
+    editor_key = f"editor_{at.session_state.calculation_id}_IEK__"
+    at.session_state[editor_key] = {
+        "edited_rows": {row_number: {"final_qty": 0, "override_reason": "Проверка актуальности поиска"}},
+        "added_rows": [], "deleted_rows": [],
+    }
+    at.run()
+    healthy(at)
+    assert "assistant_answer" not in at.session_state
+    assert calls == ["IEK заказ"]  # Editing must not spend another API call.
+    button(at, "Спросить").click().run()
+    healthy(at)
+    assert sku not in set(at.session_state.assistant_answer.rows.sku)
+    assert calls == ["IEK заказ", "IEK заказ"]
+    button(at, "Рассчитать").click().run()
+    healthy(at)
+    assert "assistant_answer" not in at.session_state
+    assert calls == ["IEK заказ", "IEK заказ"]
