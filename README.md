@@ -3,4 +3,4 @@ Hackathon team repository for AI-Dostar
 
 ## Team memory
 
-Read [team memory](docs/team-memory.md) before starting work. To enable searchable memory across Codex sessions, follow the [Mem0 setup](docs/memory-setup.md).
+Read [team memory](docs/team-memory.md) before starting work. Update it with important decisions and verified commands before committing or pushing. Teammates receive it through `git pull`; no account or plugin setup is needed.

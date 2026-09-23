@@ -1,6 +1,6 @@
 # AI-Dostar: team memory
 
-This file is committed with the project and read by coding agents at the start of a task. Add verified, durable facts here. Replace outdated entries when a decision changes; do not accumulate contradictory notes.
+This file is committed with the project and read by coding agents at the start of a task. Add verified, durable facts here before each relevant commit or push. Replace outdated entries when a decision changes; do not accumulate contradictory notes.
 
 ## Project
 
@@ -9,8 +9,8 @@ This file is committed with the project and read by coding agents at the start o
 
 ## Decisions
 
-- 2026-09-23: Keep team decisions in this file so teammates receive them through Git. Use the Mem0 Codex plugin for searchable history across sessions; it requires each teammate to connect to the same Mem0 account/workspace for shared remote recall.
-- 2026-09-23: Verified the Mem0 project lane for this Git remote: a record written under one user ID was found from another user ID with `repo` scope. The temporary test record was removed.
+- 2026-09-23: Team memory lives in this Markdown file and is shared through Git. No Mem0 account or plugin is required for this repository. The repo-level Codex config disables an already-installed Mem0 plugin here.
+- 2026-09-23: Agents read this file at task start and update it with meaningful, verified changes before pushing.
 
 ## Working commands
 
