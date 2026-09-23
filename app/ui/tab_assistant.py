@@ -23,42 +23,64 @@ def _source(text: str) -> str:
     return "правила без ИИ" + (text[5:] if text.startswith("rules ") else "")
 
 
+EXAMPLES = [
+    "Какие позиции IEK заказать в первую очередь и почему?",
+    "Почему по трубе гибкой Ø50 такой большой заказ?",
+    "Дай сводку по заказу Systeme Electric",
+    "Что сделать с этим заказом? Дай рекомендации",
+    "Какие товары выходят из ассортимента или заменяются новыми моделями?",
+]
+
+
+def render_ask_panel(result) -> None:
+    """Prominent «Спросить ассистента» panel. app.py draws it at the top of the page but calls it
+    after the tabs, so the order edits of this run are already applied when staleness is checked."""
+    lines = st.session_state.order_lines
+    signals = result.lifecycle if getattr(result, "lifecycle", None) is not None else schema.empty(schema.LIFECYCLE)
+    with st.container(border=True):
+        st.markdown("### 🤖 Спросить ассистента")
+        st.caption("Задайте вопрос о заказе своими словами. " + (
+            "ИИ (ChatGPT) понимает вопрос и выбирает нужные данные; ответ и количества формирует приложение "
+            "из текущего расчета." if copilot.enabled() else
+            "ИИ не подключен (нет OPENAI_API_KEY): вопрос разбирается по правилам."))
+        left, right = st.columns([6, 1], vertical_alignment="bottom")
+        question = left.text_area("Ваш вопрос", key="assistant_q", height=68, label_visibility="collapsed",
+                                  placeholder="Например: критичные УЗО у IEK, где был дефицит — что заказать?")
+        asked = right.button("Спросить", key="assistant_ask", type="primary", width="stretch")
+        example = st.pills("Примеры вопросов", EXAMPLES, key="assistant_example")
+        if example and example != st.session_state.get("assistant_last_example"):
+            st.session_state.assistant_last_example = example
+            question, asked = example, True
+        # Answers contain quantities: drop an answer computed for another order or calculation.
+        answer_key = (st.session_state.get("calculation_id", 0), lines.to_json())
+        if st.session_state.get("assistant_answer_key") != answer_key:
+            st.session_state.pop("assistant_answer", None)
+        if asked and question.strip():
+            with st.spinner("Ассистент готовит ответ…"):
+                st.session_state.assistant_answer = assistant.ask(question, lines, signals)
+                st.session_state.assistant_answer_key = answer_key
+                st.session_state.assistant_question = question
+        answer = st.session_state.get("assistant_answer")
+        if answer is not None:
+            if st.session_state.get("assistant_question"):
+                st.markdown(f"**Вопрос:** {st.session_state.assistant_question}")
+            st.markdown(answer.text)
+            st.caption(f"Источник: {_source(answer.source)} · данные: {assistant.describe(answer.filter)}")
+            if not answer.rows.empty:
+                with st.expander(f"На чем основан ответ: {len(answer.rows)} строк заказа"):
+                    table = answer.rows[list(COLUMNS)].rename(columns=COLUMNS)
+                    table["Срочность"] = table["Срочность"].map(URGENCY).fillna(table["Срочность"])
+                    st.dataframe(table, hide_index=True, width="stretch")
+
+
 def render(result: schema.PipelineResult) -> None:
     lines = st.session_state.order_lines
     signals = result.lifecycle if result.lifecycle is not None else schema.empty(schema.LIFECYCLE)
-    st.caption("ИИ " + ("подключён" if copilot.enabled() else "не подключён (нет OPENAI_API_KEY): работают правила")
-               + ". Ассистент не меняет количества и не утверждает заказы.")
-
+    st.caption("Вопросы ассистенту — в панели «Спросить ассистента» вверху страницы. "
+               "Ассистент не меняет количества и не утверждает заказы.")
     st.subheader("Рекомендации")
     for item in assistant.recommendations(lines, signals):
         st.write(f"• {item}")
-
-    st.subheader("Спросить ассистента")
-    st.caption("Опишите, что нужно получить. ИИ выбирает нужные данные; "
-               "ответ и количества формирует приложение из текущего расчета.")
-    examples = ["Какие позиции IEK заказать в первую очередь и почему?",
-                "Почему по трубе гибкой Ø50 такой большой заказ?",
-                "Дай сводку по заказу Systeme Electric",
-                "Есть ли товары, которые выходят из ассортимента или заменяются новыми моделями?"]
-    pick = st.selectbox("Пример вопроса", ["—"] + examples, key="assistant_example")
-    question = st.text_area("Ваш вопрос", value="" if pick == "—" else pick, height=80, key=f"assistant_q_{pick}",
-                            placeholder="например: критичные УЗО у IEK, где был дефицит — что заказать?")
-    answer_key = (st.session_state.get("calculation_id", 0), lines.to_json())
-    if st.session_state.get("assistant_answer_key") != answer_key:
-        st.session_state.pop("assistant_answer", None)
-    if st.button("Спросить", key="assistant_ask", type="primary") and question.strip():
-        with st.spinner("Ассистент готовит ответ…"):
-            st.session_state.assistant_answer = assistant.ask(question, lines, signals)
-            st.session_state.assistant_answer_key = answer_key
-    answer = st.session_state.get("assistant_answer")
-    if answer is not None:
-        st.markdown(answer.text)
-        st.caption(f"Источник: {_source(answer.source)} · данные: {assistant.describe(answer.filter)}")
-        if not answer.rows.empty:
-            with st.expander(f"На чем основан ответ: {len(answer.rows)} строк заказа"):
-                table = answer.rows[list(COLUMNS)].rename(columns=COLUMNS)
-                table["Срочность"] = table["Срочность"].map(URGENCY).fillna(table["Срочность"])
-                st.dataframe(table, hide_index=True, width="stretch")
 
     st.subheader("Жизненный цикл ассортимента")
     if signals.empty:

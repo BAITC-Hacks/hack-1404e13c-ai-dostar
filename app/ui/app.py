@@ -393,6 +393,7 @@ data = st.session_state.result_data
 if params != result.params:
     st.warning("Параметры изменены. Нажмите «Рассчитать», чтобы обновить заказ и проверки.")
 st.caption(f"Расчёт на {result.as_of.date()} · реальные данные Excel · {len(result.sales_flagged):,} строк продаж")
+ask_slot = st.container()  # «Спросить ассистента» on top; filled after the tabs apply order edits
 if result.forecast_details is not None:
     meta = result.forecast_details["metadata"]
     st.success(f"Прогноз: обученный ML · {meta['model']} · обучение по {meta['trained_through']} · {meta['training_rows']:,} примеров")
@@ -433,3 +434,5 @@ with tab_oneoffs:
 with tab_assist:
     from app.ui import tab_assistant
     tab_assistant.render(result)
+with ask_slot:
+    tab_assistant.render_ask_panel(result)

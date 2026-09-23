@@ -11,7 +11,10 @@ RUN python -m pip install --no-cache-dir -r requirements.txt -c requirements-doc
 
 # Train using the same Linux libraries that will load the artifact at runtime.
 FROM base AS prepared
-COPY app ./app
+COPY app/__init__.py app/schema.py ./app/
+COPY app/adapters ./app/adapters
+COPY app/engine ./app/engine
+COPY app/ml ./app/ml
 COPY datasets/IEK/ ./datasets/IEK/
 COPY ["datasets/Systeme electric/", "./datasets/Systeme electric/"]
 RUN python -m app.adapters.build --raw datasets \
