@@ -1,0 +1,19 @@
+name: ai-dostar
+services:
+  web:
+    build:
+      context: .
+      target: runtime
+    image: ai-dostar:ml-demand
+    ports:
+      - "127.0.0.1:${AIDOSTAR_PORT:-8502}:8501"
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      COPILOT_ENABLED: ${COPILOT_ENABLED:-1}
+    volumes:
+      - approvals:/app/data/state
+    restart: unless-stopped
+    init: true
+volumes:
+  approvals:

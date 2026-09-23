@@ -1,0 +1,15 @@
+# Allow only application code, dependency files and original training books.
+**
+!Dockerfile
+!requirements.txt
+!requirements-docker.lock
+!app/
+!app/**
+!datasets/
+!datasets/IEK/
+!datasets/IEK/**
+!datasets/Systeme electric/
+!datasets/Systeme electric/**
+**/__pycache__/**
+**/*.pyc
+**/~$*

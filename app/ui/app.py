@@ -379,6 +379,7 @@ if st.sidebar.button("Рассчитать", type="primary", disabled=(data is N
     st.session_state.pop("assistant_found", None)
     st.session_state.pop("assistant_answer", None)
     st.session_state.pop("assistant_answer_context", None)
+    st.session_state.pop("assistant_answer_key", None)
     st.session_state.pop("pair_review", None)
 
 result = st.session_state.get("result")
