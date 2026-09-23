@@ -10,7 +10,7 @@ This file is committed with the project and read by coding agents at the start o
 
 ## Progress (обновлять при каждом push)
 
-Статус на 2026-09-23, после задачи 2.1 (прогноз с сезонностью). Подробные задачи и владельцы — `docs/tasks.md`.
+Статус на 2026-09-23: готовы 2.0, 2.1 (Человек 2) и 1.1 (Человек 1). Подробные задачи и владельцы — `docs/tasks.md`.
 
 **Сделано (в `main`):**
 
@@ -24,15 +24,17 @@ This file is committed with the project and read by coding agents at the start o
 | **Задача 2.0**: каркас движка, `pipeline.run()` работает на реальных данных (~3 с) | `app/engine/`, `app/pipeline.py` | `960393f` |
 | Заготовки для Продукта: Streamlit (мок ↔ реальный расчет), мок, экспорт, copilot | `app/ui/app.py`, `app/mock.py`, `app/export.py`, `app/copilot.py` | `960393f` |
 | Тесты приемки (must-have 2–4 пока `xfail`) | `tests/test_acceptance.py`, `tests/test_demand.py` | `960393f` |
-| **Задача 2.1**: прогноз с сезонностью (SKU → группа → компания), устойчивый тренд, робастная σ; методика | `app/engine/forecast.py`, `docs/methodology-forecast.md` | этот коммит |
+| **Задача 2.1**: прогноз с сезонностью (SKU → группа → компания), устойчивый тренд, робастная σ; методика | `app/engine/forecast.py`, `docs/methodology-forecast.md` | `dcc294b` |
+| **Задача 1.1** (Человек 1): поиск разовых строк накладных | `app/engine/oneoffs.py` | `ef7cd5d` |
+| Конвертер xlsx → csv (Windows-пути `C:/Hackathon/datasets`) — вспомогательный, pipeline читает xlsx через адаптеры | `scripts/excel_to_csv.py` | `d3c84ef` |
 
-**Тесты сейчас:** 13 passed, 2 xfailed. Must-have №2 (сезонность и устойчивый рост) закрыт. Остались `xfail`: дефициты (1.2), Петля/Коробки (1.1).
+**Тесты сейчас:** 14 passed, 1 xfailed. Закрыты must-have №2 (сезонность и рост) и №4 (разовые заказы: Петля исключена, Коробки нет). Остался `xfail`: дефициты (1.2).
 
 **Что в каркасе заглушка, а что уже настоящее:**
 
 | Модуль | Настоящее | Заглушка → кто делает |
 |---|---|---|
-| `engine/oneoffs.py` | контракт, `report()` | разовые не помечаются → Человек 1, задача 1.1 |
+| `engine/oneoffs.py` | **готово (1.1)**: median/MAD + доля месяца + нерегулярность, fallback по категории | — |
 | `engine/demand.py` | сетка месяцев 2025-01..as_of, нетто продажи, вычет разовых, флаг stockout, неполный текущий месяц | uplift за дефицит = 0 → Человек 1, задача 1.2 |
 | `engine/forecast.py` | **готово (2.1)**: сезонность с усадкой, тренд, рост, робастная σ | — |
 | `engine/replenish.py` | вся формула: в пути в горизонте, z·σ·√LT, кратность, срочность, `needs_review` | мелкие доработки → Человек 2, задача 2.2 |
@@ -42,7 +44,7 @@ This file is committed with the project and read by coding agents at the start o
 
 **Следующие шаги:**
 
-- Человек 1 — 1.1 разовые заказы (снять `xfail` с `test_4_loop_one_off_excluded`), затем 1.2 uplift (`test_3_stockout_fix_raises_demand`).
+- Человек 1 — 1.2 uplift за дефицит (снять `xfail` с `test_3_stockout_fix_raises_demand` — скажи Человеку 2 или сними сам), 1.3 тесты, 1.4 отчет для UI.
 - Человек 2 — 2.2 (проверить крайние случаи пополнения), 2.3 формулировки обоснования, 2.4 оставшиеся приемочные тесты.
 - Человек 3 — 3.1–3.3 на моке; в 1:10 выключить «Мок-данные» и работать с `pipeline.run()`.
 

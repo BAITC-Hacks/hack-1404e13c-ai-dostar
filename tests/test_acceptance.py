@@ -100,7 +100,6 @@ def test_3_stockout_fix_raises_demand(data):
     assert on["qty_regular"].sum() > off["qty_regular"].sum()
 
 
-@pytest.mark.xfail(reason="task 1.1: one-off detection not implemented yet", strict=False)
 def test_4_loop_one_off_excluded(base):
     flagged = base.sales_flagged
     assert flagged.query("sku == '130200305_' and qty == 210000")["is_oneoff"].all()
