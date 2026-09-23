@@ -180,4 +180,7 @@ monthly = result.demand_monthly
 
 ## Продукт
 
-(Person 3 notes)
+- 2026-09-23: Implemented Streamlit tabs for order editing/approval/export, product history, factor checks, SE manager comparison, and one-off report. Approvals are saved in `data/state/approvals.json` and restored only when the calculated line signature matches; editing revokes prior approval. Mock approvals use a separate local state file. Exports include only approved positive rows, with CSV/XLSX formula escaping.
+- 2026-09-23: On Windows, `.venv/Scripts/python.exe -m pytest -q tests/test_product.py` passed (3 tests); Streamlit AppTest completed the mock flow without exceptions. After the concurrent demand/calc updates, full suite without `data/clean` reports 28 passed, 24 skipped.
+- 2026-09-23: Product tab now wires the existing `app/copilot.explain_line` to an explicit per-SKU button; without an API key it displays the template fallback. Review fixes: export re-reads persisted approvals, signatures cover all immutable row fields, and clearing edited quantity gives validation instead of an exception.
+- 2026-09-23: Real UI remains blocked by source layout: `python -m app.adapters.build --raw datasets` raises `KeyError: 'Документ'` because IEK `Динамика продаж_2025-2026.xlsx` has MOQ headers. IEK `Ежемесячные остатки...xlsx` has invoice headers, `Путь ИЭК...xlsx` has monthly stock headers, and `Сезонность ИЭК.xlsx` has transit headers; an IEK seasonality workbook matching the adapter is absent. Keep adapter ownership with the data team; see README and `docs/demo.md`.
