@@ -10,6 +10,8 @@ This file is committed with the project and read by coding agents at the start o
 
 ## Progress (обновлять при каждом push)
 
+**Рабочая версия: тег `v1.1.0` (23.09.2026)** — Docker-запуск, панель ассистента над вкладками, влита ветка ML; заметки в `docs/RELEASE.md`. README проверен: ссылки существуют, цифры ML и примеров сверены с `docs/ml-evaluation.json` и расчётом.
+
 - 2026-09-23: README now documents Community Cloud deployment, a copyable root `streamlit_app.py` bootstrap (build ignored Parquet from tracked datasets, optionally train ML), Python 3.12, root-level TOML secrets, reboots after data updates, and shared/non-durable approval state. Bootstrap is an example only, not an added runtime file. Deployment steps checked against official Streamlit docs and repository paths; no cloud app was created. Local Python validation was unavailable in the restricted environment (base Python executable access denied); application code unchanged.
 
 **Готовая версия: тег `v1.0.0` (23.09.2026), заметки — `docs/RELEASE.md`.** Код заморожен: дальше только исправления багов, найденных на прогоне демо. Проверено перед выпуском: сборка из `datasets/`, обучение ML (−16,3% ошибки к статистике), `pytest` 116 passed без пропусков, UI на реальных данных в обоих методах прогноза (статистика 678/401, ML 574/400), ChatGPT живым ключом. Для демо: `git checkout v1.0.0` или `main` на этом теге.
