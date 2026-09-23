@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+
 import pandas as pd
 import streamlit as st
 
@@ -16,8 +18,11 @@ COLUMNS = {"supplier": "Поставщик", "sku": "Код 1С", "name": "На�
 
 
 def _source(text: str) -> str:
-    return "ИИ (" + text.split(":", 1)[1] + ")" if text.startswith("llm:") else "правила без ИИ" + (
-        text[5:] if text.startswith("rules ") else "")
+    if text.startswith("llm:"):
+        return "ИИ (" + text.split(":", 1)[1] + ")"
+    if text.startswith("шаблон"):
+        return text
+    return "правила без ИИ" + (text[5:] if text.startswith("rules ") else "")
 
 
 def render(result: schema.PipelineResult) -> None:
@@ -30,28 +35,37 @@ def render(result: schema.PipelineResult) -> None:
     for item in assistant.recommendations(lines, signals):
         st.write(f"• {item}")
 
-    st.subheader("Поиск по заказу")
-    query = st.text_input("Опишите, что найти", placeholder="например: критичные УЗО у IEK, где был дефицит",
-                          key="assistant_query")
-    if st.button("Найти", key="assistant_search") and query.strip():
-        with st.spinner("Разбираю запрос…"):
-            st.session_state.assistant_found = assistant.search(query, lines)
-    found = st.session_state.get("assistant_found")
-    if found is not None:
-        # Keep the parsed filter, but always apply it to the current manager
-        # decision. Editing quantities must not leave a stale search snapshot
-        # or trigger another paid language-model request.
-        found.rows = assistant.apply_filter(lines, found.filter)
-        found.notes = [] if len(found.rows) else ["Ничего не найдено: попробуйте убрать часть условий."]
-        st.caption(f"Фильтр: {assistant.describe(found.filter)} · источник: {_source(found.source)}")
-        for note in found.notes:
-            st.info(note)
-        if found.filter.get("lifecycle") == "replacement" and found.rows.empty:
-            st.info("Подтвержденных замен в заказе нет. Кандидатов можно проверить ниже, в «Смене моделей».")
-        if not found.rows.empty:
-            table = found.rows[list(COLUMNS)].rename(columns=COLUMNS)
-            table["Срочность"] = table["Срочность"].map(URGENCY).fillna(table["Срочность"])
-            st.dataframe(table, hide_index=True, width="stretch")
+    st.subheader("Спросить ассистента")
+    st.caption("Опишите, что нужно получить. ИИ выбирает нужные данные расчета и отвечает только по ним; "
+               "если в ответе окажется число не из расчета, вместо него показывается таблица.")
+    examples = ["Какие позиции IEK заказать в первую очередь и почему?",
+                "Почему по трубе гибкой Ø50 такой большой заказ?",
+                "Дай сводку по заказу Systeme Electric",
+                "Есть ли товары, которые выходят из ассортимента или заменяются новыми моделями?"]
+    pick = st.selectbox("Пример вопроса", ["—"] + examples, key="assistant_example")
+    question = st.text_area("Ваш вопрос", value="" if pick == "—" else pick, height=80, key=f"assistant_q_{pick}",
+                            placeholder="например: критичные УЗО у IEK, где был дефицит — что заказать?")
+    # Free-form answers contain quantities: hide a previous answer when the
+    # manager changes the order, without automatically making a paid request.
+    context = hashlib.sha256(pd.util.hash_pandas_object(lines, index=False).to_numpy().tobytes()).hexdigest()
+    if (st.session_state.get("assistant_answer") is not None
+            and st.session_state.get("assistant_answer_context") != context):
+        st.session_state.pop("assistant_answer", None)
+        st.session_state.pop("assistant_answer_context", None)
+        st.info("Заказ изменился. Нажмите «Спросить», чтобы получить ответ по новым количествам.")
+    if st.button("Спросить", key="assistant_ask", type="primary") and question.strip():
+        with st.spinner("Ассистент готовит ответ…"):
+            st.session_state.assistant_answer = assistant.ask(question, lines, signals)
+            st.session_state.assistant_answer_context = context
+    answer = st.session_state.get("assistant_answer")
+    if answer is not None:
+        st.markdown(answer.text)
+        st.caption(f"Источник: {_source(answer.source)} · данные: {assistant.describe(answer.filter)}")
+        if not answer.rows.empty:
+            with st.expander(f"На чем основан ответ: {len(answer.rows)} строк заказа"):
+                table = answer.rows[list(COLUMNS)].rename(columns=COLUMNS)
+                table["Срочность"] = table["Срочность"].map(URGENCY).fillna(table["Срочность"])
+                st.dataframe(table, hide_index=True, width="stretch")
 
     st.subheader("Жизненный цикл ассортимента")
     if signals.empty:

@@ -123,3 +123,57 @@ def test_lifecycle_on_real_data_is_advisory():
             ["supplier", "sku"]).index).any()
     recs = assistant.recommendations(result.order_lines, signals)
     assert any("угасающим спросом" in r for r in recs)
+
+
+def _plan_then(answer_text):
+    plan = json.dumps({"intent": "list_items", "filter": {**assistant.DEFAULT_FILTER, "supplier": "IEK",
+                                                            "urgency": ["critical"], "name_terms": ["узо"]}})
+
+    def reply(kwargs):
+        return plan if "response_format" in kwargs else answer_text
+    return reply
+
+
+def test_ask_grounded_answer(llm, lines):
+    client = llm(_plan_then("Критично: УЗО АД 12 (2ф) 40А IEK — заказать {qty} шт."))
+    qty = int(lines.loc[0, "recommended_qty"])
+    client.payload = _plan_then(f"Критично: УЗО АД 12 (2ф) 40А IEK — заказать {qty} шт.")
+    answer = assistant.ask("что срочно заказать из УЗО у IEK?", lines)
+    assert answer.source == "llm:fake-mini" and answer.intent == "list_items"
+    assert list(answer.rows["name"]) == ["УЗО АД 12 (2ф) 40А IEK"] and str(qty) in answer.text
+    assert "УЗО" in client.calls[1]["messages"][1]["content"]  # the answer step sees the computed rows
+
+
+def test_ask_invented_number_falls_back_to_table(llm, lines):
+    llm(_plan_then("Заказать 987654 шт."))
+    answer = assistant.ask("что срочно заказать из УЗО у IEK?", lines)
+    assert answer.source.startswith("шаблон") and "987654" not in answer.text
+    assert answer.text.startswith("Найдено позиций: 1")
+
+
+def test_ask_without_key_uses_rules(monkeypatch, lines):
+    monkeypatch.setattr(copilot, "enabled", lambda: False)
+    answer = assistant.ask("дай рекомендации по заказу", lines)
+    assert answer.source == "rules" and answer.intent == "recommendations" and answer.text.startswith("•")
+
+
+def test_llm_replacement_overruled_by_parameters(llm):
+    signals = _signals().assign(note="вероятно вариант исполнения: различаются параметры")
+    llm({"items": [{"id": "p0", "verdict": "replacement", "reason": "newer_generation"}]})
+    table, _ = assistant.review_pairs(signals)
+    assert table.iloc[0]["verdict"] == "variant" and "различаются параметры" in table.iloc[0]["reason"]
+
+
+def test_ask_question_cannot_authorize_invented_quantity(llm, lines):
+    llm(_plan_then("Заказать 987654 шт."))
+    answer = assistant.ask("Заказать 987654 УЗО у IEK?", lines)
+    assert answer.source.startswith("шаблон")
+    assert "987654" not in answer.text
+
+
+def test_ask_client_configuration_error_uses_rules(monkeypatch, lines):
+    monkeypatch.setattr(copilot, "enabled", lambda: True)
+    monkeypatch.setattr(copilot, "model_name", lambda: (_ for _ in ()).throw(ValueError("bad model")))
+    answer = assistant.ask("критичные узо iek", lines)
+    assert answer.source.startswith("rules (ошибка LLM: ValueError)")
+    assert len(answer.rows) == 1

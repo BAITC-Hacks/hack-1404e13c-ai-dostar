@@ -4,14 +4,14 @@
     "errors": "0",
     "failures": "0",
     "skipped": "0",
-    "tests": "113",
-    "time": "185.912",
-    "timestamp": "2026-09-23T17:18:22.899209+05:00"
+    "tests": "119",
+    "time": "153.320",
+    "timestamp": "2026-09-23T17:25:45.144636+05:00"
   },
   "test_modules": {
     "tests.test_acceptance": 17,
     "tests.test_adapters": 7,
-    "tests.test_assistant": 8,
+    "tests.test_assistant": 14,
     "tests.test_copilot": 27,
     "tests.test_demand": 21,
     "tests.test_ml": 6,
@@ -29,5 +29,8 @@
   ],
   "browser_tabs": 6,
   "browser_errors": 0,
-  "browser_target": "http://127.0.0.1:8501"
+  "browser_target": "http://127.0.0.1:8501",
+  "notebook_checked_before_assistant_commit": "130bf37",
+  "integrated_main_commit": "130bf37",
+  "verification_document_links": 25
 }

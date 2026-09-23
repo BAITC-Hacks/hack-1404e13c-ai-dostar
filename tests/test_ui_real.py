@@ -101,26 +101,26 @@ def test_real_ui_order_explanation_checks_approval_exports_restart(tmp_path, mon
     assert comparison["Заказ менеджера"].isna().any()
 
 
-def test_real_assistant_refreshes_search_after_edit_and_recalculation(tmp_path, monkeypatch):
-    """A cached language filter must not freeze quantities from an older order."""
+def test_real_assistant_invalidates_answer_after_edit_and_recalculation(tmp_path, monkeypatch):
+    """A free-form answer must never show quantities from an older order."""
     from app import assistant
 
     monkeypatch.setattr(state, "STATE_FILE", tmp_path / "approvals.json")
     monkeypatch.setattr(copilot, "enabled", lambda: False)
     calls = []
-    real_search = assistant.search
+    real_ask = assistant.ask
 
-    def tracked_search(query, lines):
+    def tracked_ask(query, lines, signals):
         calls.append(query)
-        return real_search(query, lines)
+        return real_ask(query, lines, signals)
 
-    monkeypatch.setattr(assistant, "search", tracked_search)
+    monkeypatch.setattr(assistant, "ask", tracked_ask)
     at = AppTest.from_file(APP, default_timeout=90).run()
     button(at, "Рассчитать").click().run()
-    at.text_input(key="assistant_query").input("IEK заказ").run()
-    button(at, "Найти").click().run()
+    at.text_area[0].input("IEK заказ").run()
+    button(at, "Спросить").click().run()
     healthy(at)
-    found = at.session_state.assistant_found
+    found = at.session_state.assistant_answer
     assert found.source == "rules" and not found.rows.empty
     assert found.rows.supplier.eq("IEK").all() and found.rows.final_qty.gt(0).all()
     sku = found.rows.iloc[0].sku
@@ -133,9 +133,13 @@ def test_real_assistant_refreshes_search_after_edit_and_recalculation(tmp_path, 
     }
     at.run()
     healthy(at)
-    assert sku not in set(at.session_state.assistant_found.rows.sku)
-    assert calls == ["IEK заказ"]  # Refreshing a table must not spend another API call.
+    assert "assistant_answer" not in at.session_state
+    assert calls == ["IEK заказ"]  # Editing must not spend another API call.
+    button(at, "Спросить").click().run()
+    healthy(at)
+    assert sku not in set(at.session_state.assistant_answer.rows.sku)
+    assert calls == ["IEK заказ", "IEK заказ"]
     button(at, "Рассчитать").click().run()
     healthy(at)
-    assert "assistant_found" not in at.session_state
-    assert calls == ["IEK заказ"]
+    assert "assistant_answer" not in at.session_state
+    assert calls == ["IEK заказ", "IEK заказ"]
