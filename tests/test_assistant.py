@@ -139,15 +139,16 @@ def test_ask_grounded_answer(llm, lines):
     qty = int(lines.loc[0, "recommended_qty"])
     client.payload = _plan_then(f"Критично: УЗО АД 12 (2ф) 40А IEK — заказать {qty} шт.")
     answer = assistant.ask("что срочно заказать из УЗО у IEK?", lines)
-    assert answer.source == "llm:fake-mini" and answer.intent == "list_items"
-    assert list(answer.rows["name"]) == ["УЗО АД 12 (2ф) 40А IEK"] and str(qty) in answer.text
-    assert "УЗО" in client.calls[1]["messages"][1]["content"]  # the answer step sees the computed rows
+    assert answer.source.startswith("llm:fake-mini") and answer.intent == "list_items"
+    assert list(answer.rows["name"]) == ["УЗО АД 12 (2ф) 40А IEK"]
+    assert answer.text.startswith("Найдено позиций: 1")
+    assert len(client.calls) == 1  # Only selection is delegated; no generated quantities.
 
 
 def test_ask_invented_number_falls_back_to_table(llm, lines):
     llm(_plan_then("Заказать 987654 шт."))
     answer = assistant.ask("что срочно заказать из УЗО у IEK?", lines)
-    assert answer.source.startswith("шаблон") and "987654" not in answer.text
+    assert answer.source.startswith("llm:fake-mini") and "987654" not in answer.text
     assert answer.text.startswith("Найдено позиций: 1")
 
 
@@ -162,3 +163,60 @@ def test_llm_replacement_overruled_by_parameters(llm):
     llm({"items": [{"id": "p0", "verdict": "replacement", "reason": "newer_generation"}]})
     table, _ = assistant.review_pairs(signals)
     assert table.iloc[0]["verdict"] == "variant" and "различаются параметры" in table.iloc[0]["reason"]
+
+
+@pytest.mark.parametrize("invented", ["999", "40", "один миллион"])
+def test_answer_cannot_copy_quantity_from_question_or_other_field(llm, lines, invented):
+    lines["final_qty"] = 10
+    lines["free_qty"] = 40
+    client = llm(_plan_then(f"Заказать {invented} шт."))
+    answer = assistant.ask(f"Заказать {invented}?", lines)
+    assert len(client.calls) == 1
+    assert f"Заказать {invented}" not in answer.text
+    assert answer.rows["final_qty"].eq(10).all()
+
+
+def test_count_before_limit_and_supplier_scope():
+    lines = mock_order_lines(100)
+    lines["urgency"] = "critical"
+    lines["final_qty"] = 10
+    facts, rows = assistant._facts_for("list_items", dict(assistant.DEFAULT_FILTER), lines, None)
+    assert facts["строк_заказа_по_фильтру"] == 100 and len(rows) == 50
+    f = dict(assistant.DEFAULT_FILTER, supplier="SE")
+    facts, rows = assistant._facts_for("recommendations", f, lines, None)
+    assert any(r.startswith("SE:") for r in facts["рекомендации"])
+    assert not any("IEK" in r for r in facts["рекомендации"])
+    facts, _ = assistant._facts_for("lifecycle", f, lines, _signals())
+    assert "итоги_ассортимента" not in facts  # IEK signals are outside the SE scope.
+
+
+def test_assistant_answer_invalidated_after_edit_and_recalculation():
+    from streamlit.testing.v1 import AppTest
+    at = AppTest.from_string('''
+import streamlit as st
+from types import SimpleNamespace
+from app import assistant
+from app.mock import mock_order_lines
+from app.ui.tab_assistant import render
+if "order_lines" not in st.session_state:
+    st.session_state.order_lines = mock_order_lines(3)
+    st.session_state.calculation_id = 1
+if st.session_state.get("seed", True):
+    st.session_state.seed = False
+    st.session_state.assistant_answer = assistant.ChatAnswer("OLD ANSWER", "rules", "list_items", dict(assistant.DEFAULT_FILTER), st.session_state.order_lines.copy())
+    st.session_state.assistant_answer_key = (st.session_state.calculation_id, st.session_state.order_lines.to_json())
+render(SimpleNamespace(lifecycle=None))
+''').run()
+    assert not at.exception
+    assert any(m.value == "OLD ANSWER" for m in at.markdown)
+    changed = at.session_state.order_lines.copy()
+    changed.loc[0, "final_qty"] = 12345
+    at.session_state.order_lines = changed
+    at.run()
+    assert not at.exception and not any(m.value == "OLD ANSWER" for m in at.markdown)
+    at.session_state.seed = True
+    at.run()
+    assert any(m.value == "OLD ANSWER" for m in at.markdown)
+    at.session_state.calculation_id = 2
+    at.run()
+    assert not at.exception and not any(m.value == "OLD ANSWER" for m in at.markdown)

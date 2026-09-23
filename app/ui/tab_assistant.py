@@ -34,8 +34,8 @@ def render(result: schema.PipelineResult) -> None:
         st.write(f"• {item}")
 
     st.subheader("Спросить ассистента")
-    st.caption("Опишите, что нужно получить. ИИ выбирает нужные данные расчета и отвечает только по ним; "
-               "если в ответе окажется число не из расчета, вместо него показывается таблица.")
+    st.caption("Опишите, что нужно получить. ИИ выбирает нужные данные; "
+               "ответ и количества формирует приложение из текущего расчета.")
     examples = ["Какие позиции IEK заказать в первую очередь и почему?",
                 "Почему по трубе гибкой Ø50 такой большой заказ?",
                 "Дай сводку по заказу Systeme Electric",
@@ -43,9 +43,13 @@ def render(result: schema.PipelineResult) -> None:
     pick = st.selectbox("Пример вопроса", ["—"] + examples, key="assistant_example")
     question = st.text_area("Ваш вопрос", value="" if pick == "—" else pick, height=80, key=f"assistant_q_{pick}",
                             placeholder="например: критичные УЗО у IEK, где был дефицит — что заказать?")
+    answer_key = (st.session_state.get("calculation_id", 0), lines.to_json())
+    if st.session_state.get("assistant_answer_key") != answer_key:
+        st.session_state.pop("assistant_answer", None)
     if st.button("Спросить", key="assistant_ask", type="primary") and question.strip():
         with st.spinner("Ассистент готовит ответ…"):
             st.session_state.assistant_answer = assistant.ask(question, lines, signals)
+            st.session_state.assistant_answer_key = answer_key
     answer = st.session_state.get("assistant_answer")
     if answer is not None:
         st.markdown(answer.text)
