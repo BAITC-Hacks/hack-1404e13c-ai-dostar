@@ -40,7 +40,7 @@ def test_real_ui_order_explanation_checks_approval_exports_restart(tmp_path, mon
     result = at.session_state.result
     assert len(result.sales_flagged) > 200_000
     assert len(result.order_lines) > 2_000
-    assert len(at.tabs) == 5
+    assert len(at.tabs) == 6 and at.tabs[-1].label == "Ассистент"
 
     at.selectbox(key="product_sku").select("IEK | 130300792_").run()
     button(at, "Объяснить подробнее").click().run()

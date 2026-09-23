@@ -150,6 +150,21 @@ FORECAST = {
     "forecast_H": "float64",
 }
 
+# Assortment lifecycle signals (engine/lifecycle.py). Advisory: quantities are not changed.
+LIFECYCLE = {
+    "supplier": "string",
+    "sku": "string",
+    "name": "string",
+    "signal": "string",  # declining | new_item | replaced_by | replaces
+    "related_sku": "string",  # the other model of a replacement pair
+    "related_name": "string",
+    "similarity": "float64",  # name similarity of the pair, 0..1
+    "avg_last3": "float64",  # regular demand per month, last 3 full months
+    "avg_prev9": "float64",  # regular demand per month, 9 months before
+    "first_month": "string",  # first month with sales, YYYY-MM
+    "note": "string",
+}
+
 # ---------------------------------------------------------------- output
 
 ORDER_LINES = {
@@ -210,6 +225,7 @@ class PipelineResult:
     params: Params
     as_of: pd.Timestamp
     forecast_details: dict | None = None  # ML provenance, validation and monthly curve
+    lifecycle: pd.DataFrame | None = None  # LIFECYCLE signals, advisory
 
 
 def empty(table: dict[str, str]) -> pd.DataFrame:

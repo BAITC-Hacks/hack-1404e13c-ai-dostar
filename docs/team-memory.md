@@ -19,6 +19,7 @@ This file is committed with the project and read by coding agents at the start o
 | Что | Где | Коммит |
 |---|---|---|
 | Анализ ТЗ и реальных данных, расхождения с ТЗ и допущения | `docs/architecture.md` §2 | `defea03` |
+| **Ассистент и жизненный цикл**: рекомендации, поиск по заказу обычными словами (ChatGPT → JSON-фильтр, без ключа — правила), угасающий спрос / новинки / кандидаты в замену модели с проверкой ИИ; количества не меняются | `app/assistant.py`, `app/engine/lifecycle.py`, `app/ui/tab_assistant.py`, `docs/methodology-assistant.md`, `tests/test_assistant.py` | «assistant: …» |
 | **Задачи 2.2, 2.3**: явные `needs_review` для некорректных остатков/поставок/кратности, правило «нет базы спроса — нет строки»; обоснование с кратностью и крупнейшей разовой строкой (дата, накладная) | `app/engine/replenish.py`, `app/engine/explain.py`, `app/pipeline.py`, `tests/test_acceptance.py` | «calc: flag invalid inputs…» |
 | MVP-архитектура на 4 часа (монолит + Streamlit); `SupplyAI_ARCHITECTURE.md` — целевая, не для хакатона | `docs/architecture.md` | `defea03` |
 | Контракт данных | `app/schema.py` | `defea03`, `960393f` |
@@ -200,6 +201,8 @@ monthly = result.demand_monthly
 
 - 2026-09-23: Reviewed teammate fixes `48ab2fc` + `27350f9`: copilot now returns app-authored fact statements chosen by the model via strict JSON schema (default model `gpt-4o-mini`, override `OPENAI_MODEL`); σ uses IQR/1.349; IEK lines carry `needs_review:estimated_stock` and approval requires a stock-check checkbox. Real-data AppTest: explain, supplier summary, checks, blocked approval — no exceptions. Pipe `130300792_` order is now 16 350 (was 16 400 with MAD σ).
 - 2026-09-23: Tasks 2.2/2.3 done. `explain.add_rationale(order_lines, products, sales_flagged)` — both optional; pipeline passes them.
+
+- 2026-09-23: Assistant + lifecycle added (user request). `app/engine/lifecycle.py` (LIFECYCLE table in schema, `PipelineResult.lifecycle`): declining 128 (38 still ordered), new_item 144, replacement candidates 33 (29 likely variants, 4 unverified, 0 confirmed). Advisory only: `lifecycle:*` flags + rationale sentence, quantities unchanged; unverified pairs never reach order lines. `app/assistant.py`: NL search → strict JSON filter (LLM) or keyword rules; pair review with fixed verdict/reason enums; deterministic recommendations. UI: `app/ui/tab_assistant.py`, tab «Ассистент» (6th tab, `tests/test_ui_real.py` updated to 6 tabs). Method: `docs/methodology-assistant.md`. Tests: `tests/test_assistant.py`; full suite 108 passed, 4 skipped (ML artifacts). New dependency from ML commit: scikit-learn — run `pip install -r requirements.txt`.
 
 ## Продукт
 

@@ -412,8 +412,8 @@ if result.forecast_details is not None:
             st.write(f"Последний месяц проверки {held['month']}: статистика {held['baseline_scaled_mae']:.3f}; ML {held['ml_scaled_mae']:.3f}.")
 else:
     st.caption("Прогноз: статистический. Обучаемая модель доступна в параметре «Метод прогноза».")
-tab_order, tab_product, tab_checks, tab_manager, tab_oneoffs = st.tabs(
-    ["Заказ", "Товар", "Проверки", "Сравнение с менеджером", "Разовые заказы"]
+tab_order, tab_product, tab_checks, tab_manager, tab_oneoffs, tab_assist = st.tabs(
+    ["Заказ", "Товар", "Проверки", "Сравнение с менеджером", "Разовые заказы", "Ассистент"]
 )
 with tab_order:
     order_tab(result, data)
@@ -425,3 +425,6 @@ with tab_manager:
     comparison_tab(result, data)
 with tab_oneoffs:
     oneoffs_tab(result)
+with tab_assist:
+    from app.ui import tab_assistant
+    tab_assistant.render(result)
