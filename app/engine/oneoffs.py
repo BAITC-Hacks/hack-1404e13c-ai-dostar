@@ -19,7 +19,8 @@ def flag_oneoffs(sales_lines: pd.DataFrame, params: schema.Params) -> pd.DataFra
 
     eligible = out["qty"].gt(0)
     if params.as_of is not None:
-        eligible &= out["date"].le(pd.Timestamp(params.as_of))
+        cutoff = pd.Timestamp(params.as_of).normalize() + pd.Timedelta(days=1)
+        eligible &= out["date"].lt(cutoff)
     sales = out.loc[eligible, ["supplier", "sku", "date", "qty"]].copy()
     if sales.empty:
         return schema.conform(out, schema.SALES_FLAGGED, "sales_flagged")
