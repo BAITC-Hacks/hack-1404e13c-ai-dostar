@@ -79,7 +79,7 @@ This file is committed with the project and read by coding agents at the start o
 
 ## Спрос
 
-(Person 1 notes)
+- 2026-09-23: Task 1.1 implemented in `app/engine/oneoffs.py`: positive invoice lines use per-SKU median/MAD, >30% share of SKU-month, and comparable-volume recurrence across months. A SKU with just one sale uses the 90th/99th category percentiles only when at least 100 peer lines exist. On real data, IEK LOOP 210,000 is excluded (typical category line 10); recurring SE boxes 36–90k are retained. Pytest: 11 passed, 2 xfailed, 1 xpassed (`test_4_loop_one_off_excluded`; Person 2 owns its xfail marker).
 
 ## Расчет
 
